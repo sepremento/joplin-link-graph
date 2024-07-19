@@ -40,7 +40,7 @@ joplin.plugins.register({
     const view = await (panels as any).create("note-graph-view");
     await panels.setHtml(view, "Note Graph is Loading");
     var prevData = {};
-    var prevNoteLinks: Set<string>;
+    var prevNoteLinks = [];
     var syncOngoing = false;
 
     async function drawPanel() {
@@ -92,6 +92,7 @@ joplin.plugins.register({
       switch (message.name) {
         case "poll":
           let p = new Promise((resolve) => {
+            console.log(`Promise created!`)
             pollCb = resolve;
           });
           notifyUI();
@@ -115,10 +116,10 @@ joplin.plugins.register({
         return;
       }
 
-      const maxDegree = await joplin.settings.value(
-        "SETTING_MAX_SEPARATION_DEGREE"
-      );
+      const maxDegree = await joplin.settings.value("SETTING_MAX_SEPARATION_DEGREE");
+
       var dataChanged = false;
+
       // Speed up the inital load by skipping the eventName switch.
       if (typeof data === "undefined") {
         data = await fetchData();
@@ -127,9 +128,11 @@ joplin.plugins.register({
         if (eventName === "noteChange") {
           // Don't update the graph is the links in this note haven't changed.
           const selectedNote = await joplin.workspace.selectedNote();
-          var noteLinks = joplinData.getAllLinksForNote(selectedNote.body);
+          var noteLinks = Array.from(joplinData.getAllLinksForNote(selectedNote.body));
+
           if (!deepEqual(noteLinks, prevNoteLinks)) {
             prevNoteLinks = noteLinks;
+            data = await fetchData();
             dataChanged = true;
           }
         } else if (eventName === "noteSelectionChange" && maxDegree == 0) {
@@ -147,6 +150,7 @@ joplin.plugins.register({
           });
           dataChanged = true;
         } else {
+          console.log('eventName is not noteChange nor noteSelectionChange')
           data = await fetchData();
           dataChanged = !deepEqual(data, prevData);
         }
@@ -180,28 +184,19 @@ joplin.plugins.register({
 
 async function fetchData() {
   // Load settings
-  const maxDegree = await joplin.settings.value(
-    "SETTING_MAX_SEPARATION_DEGREE"
-  );
+  const maxDegree = await joplin.settings.value( "SETTING_MAX_SEPARATION_DEGREE");
   const maxNotes = await joplin.settings.value("SETTING_MAX_NODES");
-  const filteredNotebookNames = await joplin.settings.value(
-    "SETTING_NOTEBOOK_NAMES_TO_FILTER"
-  );
-  const namesToFilter: Array<string> = filteredNotebookNames.split(",");
-  const shouldFilterChildren = await joplin.settings.value(
-    "SETTING_FILTER_CHILD_NOTEBOOKS"
-  );
+  const filteredNotebookNames = await joplin.settings.value("SETTING_NOTEBOOK_NAMES_TO_FILTER");
+  const shouldFilterChildren = await joplin.settings.value("SETTING_FILTER_CHILD_NOTEBOOKS");
+  const includeBacklinks = await joplin.settings.value("SETTING_INCLUDE_BACKLINKS");
+  const showLinkDirection = await joplin.settings.value("SETTING_SHOW_LINK_DIRECTION");
   const isIncludeFilter =
     (await joplin.settings.value("SETTING_FILTER_IS_INCLUDE_FILTER")) ===
       "include"
       ? true
       : false;
-  const includeBacklinks = await joplin.settings.value(
-    "SETTING_INCLUDE_BACKLINKS"
-  );
-  const showLinkDirection = await joplin.settings.value(
-    "SETTING_SHOW_LINK_DIRECTION"
-  );
+
+  const namesToFilter: Array<string> = filteredNotebookNames.split(",");
 
   const selectedNote = await joplin.workspace.selectedNote();
   const notes = await joplinData.getNotes(

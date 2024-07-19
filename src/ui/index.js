@@ -395,3 +395,4 @@ function updateGraph(data) {
       });
   }
 }
+

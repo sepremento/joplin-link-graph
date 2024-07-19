@@ -56,7 +56,7 @@ function getFilteredNotebooks(
     return !isIncludeFilter;
   }
 
-  const filteredNotebooksArray = notebooks.filter((nb) => shouldIncludeNotebook(nb.id));
+  const filteredNotebooksArray = notebooks.filter((nb) => !shouldIncludeNotebook(nb.id));
 
   return filteredNotebooksArray
 }
@@ -105,7 +105,7 @@ export async function getNotes(
     )
   }
   if (maxDegree > 0) {
-    notes = await getLinkedNotes(selectedNote, maxDegree, includeBacklinks, filteredNotebooks);
+    notes = await getLinkedNotes(selectedNote, maxDegree, includeBacklinks, filteredNotebooks, isIncludeFilter);
   } else {
     notes = await getAllNotes(maxNotes);
   }
@@ -212,7 +212,8 @@ async function getLinkedNotes(
   source_id: string,
   maxDegree: number,
   includeBacklinks: boolean,
-  filteredNotebooks: Array<Notebook>
+  filteredNotebooks: Array<Notebook>,
+  isIncludeFilter: boolean
 ): Promise<Map<string, Note>> {
   var pending = [];
   var visited = new Set();
@@ -234,9 +235,11 @@ async function getLinkedNotes(
       note.distanceToCurrentNote = degree;
       noteMap.set(joplinNote.id, note);
 
+
       let backlinks = includeBacklinks ? await getAllBacklinksForNote(note.id) : [];
+
       if (backlinks.length > 0) {
-        backlinks = await filterBacklinks(backlinks, filteredNotebooks);
+        backlinks = await filterBacklinks(backlinks, filteredNotebooks, isIncludeFilter);
       }
 
       const allLinks = [
@@ -264,17 +267,26 @@ async function getLinkedNotes(
 
 async function filterBacklinks(
   backlinks: Array<string>,
-  filteredNotebooks: Array<Notebook>
+  filteredNotebooks: Array<Notebook>,
+  isIncludeFilter: boolean
 ): Promise<Array<string>> {
+
   const joplinNotes = await getNoteArray(backlinks);
+
   const filteredNotebookIds = filteredNotebooks.map((nb) => nb.id);
 
   const filteredBacklinks = [];
 
   for (const joplinNote of joplinNotes) {
       const note = buildNote(joplinNote);
-      if (filteredNotebookIds.includes(note.id)) { filteredBacklinks.push(note.id) }
+
+      if (isIncludeFilter) {
+        if (filteredNotebookIds.includes(note.parent_id)) { filteredBacklinks.push(note.id) };
+      } else {
+        if (!filteredNotebookIds.includes(note.parent_id)) { filteredBacklinks.push(note.id) };
+      }
   }
+
   return filteredBacklinks;
 }
 

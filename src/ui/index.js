@@ -98,6 +98,7 @@ function buildGraph(data) {
       .classList.remove("mode-selection-based-graph");
 
   d3.select("#note_graph > svg").remove();
+
   svg = d3
     .select("#note_graph")
     .append("svg")
@@ -128,11 +129,10 @@ function buildGraph(data) {
   simulation = d3
     .forceSimulation()
     .force("link", forceLink)
-    .force(
-      "charge",
-      d3.forceManyBody().strength(function () {
-        return -500;
-      })
+    .force("charge",
+      d3
+      .forceManyBody()
+      .strength(() => { return -200; })
     )
     .force("nocollide", d3.forceCollide(data.nodeDistanceRatio * 200))
     .force("center", d3.forceCenter(width / 2, height / 2));
@@ -308,7 +308,14 @@ function updateGraph(data) {
     .selectAll("g")
     .data(data.nodes)
     .enter()
-    .append("g");
+    .append("g")//;
+    .call(
+      d3
+        .drag()
+        .on("start", dragStart)
+        .on("drag", drag)
+        .on("end", dragEnd)
+    );
 
   const circle = node.append("circle");
 
@@ -396,3 +403,24 @@ function updateGraph(data) {
   }
 }
 
+
+function dragStart(d) {
+  //console.log('drag start');
+  simulation.alphaTarget(0.1).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function drag(event, d) {
+  //console.log('dragging');
+  // simulation.alpha(0.5).restart()
+  d.fx = event.x;
+  d.fy = event.y;
+}
+
+function dragEnd(d) {
+  //console.log('drag end');
+  simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}

@@ -7,18 +7,21 @@ export interface Notebook {
 }
 
 async function getNotebooks(): Promise<Array<Notebook>> {
-  var allNotebooks = [];
+  var notebooks = [];
   var page_num = 1;
   do {
-    var notebooks = await joplin.data.get(["folders"], {
-      fields: ["id", "title", "parent_id"],
-      page: page_num,
-    });
-    allNotebooks.push(...notebooks.items);
+    var notebooksBatch = await joplin.data.get(
+      ["folders"], 
+      {
+        fields: ["id", "title", "parent_id"],
+        page: page_num,
+      }
+    );
+    notebooks.push(...notebooksBatch.items);
     page_num++;
-  } while (notebooks.has_more);
+  } while (notebooksBatch.has_more);
 
-  return allNotebooks;
+  return notebooks;
 }
 
 function getFilteredNotebooks(

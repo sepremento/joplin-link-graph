@@ -24,6 +24,19 @@ function update() {
 }
 
 
+function processUserQuery(query) {
+  console.log(`processUserQuery is called!`)
+
+  webviewApi.postMessage({ name: "search-query", query: query }).then((event) => {
+    if (event.data) {
+      buildGraph(event.data);
+    }
+  });
+}
+
+userInput.initQueryInput(processUserQuery);
+
+
 function getNoteTags(noteId) {
   return webviewApi.postMessage({ name: "get_note_tags", id: noteId });
 }
@@ -139,15 +152,13 @@ function buildGraph(data) {
     .forceSimulation()
     .force("link", forceLink)
     .force("charge", forceCharge)
-    //.force("x", d3.forceX())
-    //.force("y", d3.forceY())
     .force("nocollide", d3.forceCollide(data.nodeDistanceRatio * 80))
     .force("center", d3.forceCenter(width / 2, height / 2));
 
   if (data.showLinkDirection) {
     const defs = svg.append("defs");
     // For now add arrows for ten layers (excl. center).
-    // todo: make more dynamic
+    // TODO: make more dynamic
     const COUNT_LAYERS = 10;
     for (let i = 0; i < COUNT_LAYERS; i++) {
       addMarkerEndDef(defs, i);
@@ -167,15 +178,19 @@ function buildGraph(data) {
   }
 
   updateGraph(data);
-
 }
 
 
 function updateGraph(data) {
-
-  //console.log('updateGraph was called!');
+  console.log('updateGraph was called!');
 
   // Remove nodes and links from the last graph
+  console.log(`SVG is: ${svg}`);
+
+  if (typeof(svg) === "undefined") { svg = d3.select('#note_graph > svg'); }
+
+  console.log(`SVG is: ${svg}`);
+
   svg.selectAll(".nodes").remove();
   svg.selectAll(".links").remove();
 

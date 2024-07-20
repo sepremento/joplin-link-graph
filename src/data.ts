@@ -95,7 +95,7 @@ interface JoplinNote {
 
 // Fetch notes
 export async function getNotes(
-  selectedNote: string,
+  selectedNotes: Array<string>,
   maxDegree: number,
 ): Promise<Map<string, Note>> {
 
@@ -122,7 +122,7 @@ export async function getNotes(
     )
   }
   if (maxDegree > 0) {
-    notes = await getLinkedNotes(selectedNote, maxDegree, includeBacklinks, filteredNotebooks, isIncludeFilter);
+    notes = await getLinkedNotes(selectedNotes, maxDegree, includeBacklinks, filteredNotebooks, isIncludeFilter);
   } else {
     notes = await getAllNotes(maxNotes);
   }
@@ -230,18 +230,18 @@ function buildNote(joplinNote: JoplinNote): Note {
 // Fetch all notes linked to a given source note, up to a maximum degree of
 // separation.
 async function getLinkedNotes(
-  source_id: string,
+  source_ids: Array<string>,
   maxDegree: number,
   includeBacklinks: boolean,
   filteredNotebooks: Array<Notebook>,
   isIncludeFilter: boolean
 ): Promise<Map<string, Note>> {
-  var pending = [];
+  var pending = source_ids;
   var visited = new Set();
   const noteMap = new Map();
   var degree = 0;
 
-  pending.push(source_id);
+  //pending.push(source_ids);
   do {
     // Traverse a new batch of pending note ids, storing the note data in
     // the resulting map, and stashing the newly found linked notes for the

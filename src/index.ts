@@ -49,16 +49,29 @@ joplin.plugins.register({
 });
 
 
-async function fetchData(maxDegree) {
+async function fetchData(maxDegree, fetchForNotes?) {
   //console.log('fetchData was called!')
   // Load settings
+  let selectedNote;
+  const fetchForNoteIds = [];
   const getSetting = joplin.settings.value;
   const showLinkDirection = await joplin.settings.value("SETTING_SHOW_LINK_DIRECTION");
 
 
-  const selectedNote = await joplin.workspace.selectedNote();
+  console.log(`fetchData: fetchFotNotes type is: ${typeof(fetchForNotes)}`);
 
-  const notes = await joplinData.getNotes(selectedNote.id, maxDegree);
+
+  if (typeof(fetchForNotes) === "undefined") {
+    selectedNote = await joplin.workspace.selectedNote();
+    fetchForNoteIds.push(selectedNote.id);
+  } else {
+    selectedNote = fetchForNotes[0];
+    fetchForNotes.forEach((note) => { fetchForNoteIds.push(note.id); })
+  }
+
+  console.log(`fetchForNoteIds: ${fetchForNoteIds}, selectedNote: ${selectedNote}`);
+
+  const notes = await joplinData.getNotes(fetchForNoteIds, maxDegree);
 
   const data: GraphData = {
     nodes: [],
@@ -180,7 +193,7 @@ async function registerShowHideCommand(graphPanel) {
 }
 
 
-function processWebviewMessage(message) {
+async function processWebviewMessage(message) {
   switch (message.name) {
     case "poll":
       let p = new Promise((resolve) => { pollCb = resolve; });
@@ -188,6 +201,10 @@ function processWebviewMessage(message) {
       return p;
     case "update":
       return { name: "update", data: data };
+    case "search-query":
+      data = await executeSearchQuery(message.query);
+      return { name: "update", data: data };
+    break;
     case "navigateTo":
       joplin.commands.execute("openNote", message.id);
     break;
@@ -199,6 +216,23 @@ function processWebviewMessage(message) {
       return joplin.settings.value(message.key);
   }
 }
+
+
+async function executeSearchQuery(query): Promise<GraphData> {
+  console.log(`Got a query: ${query}`)
+  const maxDegree = await joplin.settings.value("MAX_TREE_DEPTH");
+  const searchResult = await joplin.data.get(['search'], {
+      query: query,
+      fields: ["id", "parent_id", "title", "body"],
+  });
+
+  const foundNotes = [...searchResult.items];
+
+  console.log(`type of foundNotes: ${typeof(foundNotes)}`)
+
+  return fetchData(maxDegree, foundNotes);
+}
+
 
 
 async function updateUI(eventName: string) {

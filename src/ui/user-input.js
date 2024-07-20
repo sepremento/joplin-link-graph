@@ -36,6 +36,22 @@ function initDistanceRangeInput(initialValue, handleChange) {
   });
 }
 
+
+export function initQueryInput(handle) {
+  console.log('initQueryInput called!')
+
+  const html = `
+  <label for="userQuery">Query</label>
+  <input name="userQuery" type="text" value="">
+  <input type="button" id="submit-query-btn" value="Submit">
+  `
+  container.insertAdjacentHTML("beforeend", html);
+  const userQuery = container.querySelector("input[name='userQuery']");
+  const submitBtn = container.querySelector("#submit-query-btn");
+  submitBtn.addEventListener("click", () => { handle(userQuery.value); })
+}
+
+
 export function init(initDistanceValue, handleDistanceChange, handleRedraw) {
   chromeRangeInputFix();
   initDistanceRangeInput(initDistanceValue, handleDistanceChange);

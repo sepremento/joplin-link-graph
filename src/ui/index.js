@@ -124,6 +124,7 @@ function buildGraph(data) {
 
   const forceLink = d3
     .forceLink()
+    .distance(40)
     .id(function (d) {
       return d.id;
     })
@@ -140,7 +141,7 @@ function buildGraph(data) {
     .force("charge", forceCharge)
     //.force("x", d3.forceX())
     //.force("y", d3.forceY())
-    .force("nocollide", d3.forceCollide(data.nodeDistanceRatio * 200))
+    .force("nocollide", d3.forceCollide(data.nodeDistanceRatio * 80))
     .force("center", d3.forceCenter(width / 2, height / 2));
 
   if (data.showLinkDirection) {

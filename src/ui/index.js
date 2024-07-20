@@ -1,6 +1,7 @@
 import * as d3 from "d3";
 import * as userInput from "./user-input.js"
 
+
 function poll() {
   webviewApi.postMessage({ name: "poll" }).then((event) => {
     if (event.data) {
@@ -10,7 +11,9 @@ function poll() {
   });
 }
 
+
 poll();
+
 
 function update() {
   webviewApi.postMessage({ name: "update" }).then((event) => {
@@ -20,14 +23,17 @@ function update() {
   });
 }
 
+
 function getNoteTags(noteId) {
   return webviewApi.postMessage({ name: "get_note_tags", id: noteId });
 }
+
 
 function addMarkerEndDef(defs, distance) {
   const style = `var(--distance-${distance}-primary-color, var(--distance-remaining-primary-color))`;
   _addMarkerEndDef(defs, distance, style);
 }
+
 
 function _addMarkerEndDef(defs, name, style) {
   defs
@@ -45,12 +51,14 @@ function _addMarkerEndDef(defs, name, style) {
     .attr("d", "M0,-5L10,0L0,5");
 }
 
+
 function minimalDistanceOfLink(link) {
   return Math.min(
     link.sourceDistanceToCurrentNode,
     link.targetDistanceToCurrentNode
   );
 }
+
 
 function setMaxDistanceSetting(newVal) {
   // will automically trigger ui update of graph
@@ -61,6 +69,7 @@ function setMaxDistanceSetting(newVal) {
   });
 }
 
+
 function getMaxDistanceSetting() {
   return webviewApi.postMessage({
     name: "get_setting",
@@ -68,11 +77,13 @@ function getMaxDistanceSetting() {
   });
 }
 
+
 getMaxDistanceSetting().then((v) => {
   // todo: shorten up, when top-level await available
   userInput.init(v, setMaxDistanceSetting, update);
   update();
 });
+
 
 var simulation, svg;
 var width, height;
@@ -82,7 +93,10 @@ var tooltip = d3
   .classed("tooltip", true)
   .classed("hidden", true);
 
+
 function buildGraph(data) {
+  console.log('buildGraph was called!');
+
   var margin = { top: 10, right: 10, bottom: 10, left: 10 };
   width = window.innerWidth;
   height = window.innerHeight;
@@ -97,6 +111,7 @@ function buildGraph(data) {
       .querySelector("#note_graph")
       .classList.remove("mode-selection-based-graph");
 
+  //remove old graph
   d3.select("#note_graph > svg").remove();
 
   svg = d3
@@ -114,26 +129,16 @@ function buildGraph(data) {
       return d.id;
     })
 
-  if (data.graphIsSelectionBased) {
-    // we are in selection-based graph
-    forceLink.strength((link) => {
-      const minDistance = minimalDistanceOfLink(link);
-      if (minDistance === 0) {
-        return 1;
-      } else if (minDistance === 1) {
-        return 0.5;
-      } else return 0.1;
-    });
-  }
+  const forceCharge = d3
+    .forceManyBody()
+    .strength(() => { return -200; })
+
+  if (data.graphIsSelectionBased) { forceLink.strength(setupForceLinkStrength) };
 
   simulation = d3
     .forceSimulation()
     .force("link", forceLink)
-    .force("charge",
-      d3
-      .forceManyBody()
-      .strength(() => { return -200; })
-    )
+    .force("charge", forceCharge)
     .force("nocollide", d3.forceCollide(data.nodeDistanceRatio * 200))
     .force("center", d3.forceCenter(width / 2, height / 2));
 
@@ -158,10 +163,16 @@ function buildGraph(data) {
   function zoom_actions(event) {
     svg.attr("transform", event.transform);
   }
+
   updateGraph(data);
+
 }
 
+
 function updateGraph(data) {
+
+  console.log('updateGraph was called!');
+
   // Remove nodes and links from the last graph
   svg.selectAll(".nodes").remove();
   svg.selectAll(".links").remove();
@@ -175,15 +186,9 @@ function updateGraph(data) {
     .enter()
     .append("line")
     .classed("adjacent-line", (d) => d.focused)
-    .attr("id", function (d) {
-      return domlinkId(d.source, d.target);
-    })
-    .on("mouseover", function (_ev, d) {
-      handleLinkHover(this, d, true);
-    })
-    .on("mouseout", function (_ev, d) {
-      handleLinkHover(this, d, false);
-    });
+    .attr("id", (d) => { return domlinkId(d.source, d.target); })
+    .on("mouseover", (_ev, d) => { handleLinkHover(this, d, true); })
+    .on("mouseout", (_ev, d) => { handleLinkHover(this, d, false); });
 
   // provide distance classes for links
   if (data.graphIsSelectionBased) {
@@ -411,6 +416,7 @@ function dragStart(d) {
   d.fy = d.y;
 }
 
+
 function drag(event, d) {
   //console.log('dragging');
   // simulation.alpha(0.5).restart()
@@ -418,9 +424,21 @@ function drag(event, d) {
   d.fy = event.y;
 }
 
+
 function dragEnd(d) {
   //console.log('drag end');
   simulation.alphaTarget(0);
   d.fx = null;
   d.fy = null;
 }
+
+
+function setupForceLinkStrength(link) {
+  const minDistance = minimalDistanceOfLink(link);
+
+  if (minDistance === 0) { return 1; }
+  if (minDistance === 1) { return 0.5; }
+
+  return 0.1;
+}
+

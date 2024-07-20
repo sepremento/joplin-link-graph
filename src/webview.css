@@ -95,7 +95,7 @@ line {
 }
 
 .node-label {
-  fill: var(--joplin-color);
+  /*fill: var(--joplin-color);*/
 }
 
 line.adjacent-to-hovered {
@@ -187,8 +187,8 @@ text.adjacent-to-hovered {
 }
 
 #note_graph.mode-selection-based-graph text.node-label.distance-0 {
-  font-size: 20px;
-  font-weight: bold;
+  /*font-size: 20px;*/
+  /*font-weight: bold;*/
 }
 
 #note_graph.mode-selection-based-graph text.node-label.distance-1 {
@@ -197,12 +197,12 @@ text.adjacent-to-hovered {
 }
 
 #note_graph.mode-selection-based-graph text.node-label.distance-2 {
-  font-size: 16px;
+  /*font-size: 16px;*/
 }
 
 #note_graph.mode-selection-based-graph text.node-label:not(.distance-0):not(.distance-1):not(.distance-2) {
-  font-size: 14px;
-  fill: var(--distance-remaining-label-color);
+  /*font-size: 14px;*/
+  /*fill: var(--distance-remaining-label-color);*/
 }
 
 /*

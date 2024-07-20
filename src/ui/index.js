@@ -359,10 +359,12 @@ function updateGraph(data) {
 
   nodeLabel
     .attr("class", "node-label")
+    .attr("fill", d => color(d.parent_id))
     .attr("id", function (d) {
       return domNodeLabelId(d.id, false);
     })
-    .attr("font-size", data.nodeFontSize + "px")
+    .attr("font-size", d => { return 10 + 6 * Math.log10(d.totalLinks + 1) + "px"; })
+    //.attr("font-size", data.nodeFontSize + "px")
     .text(function (d) {
       return d.title;
     })

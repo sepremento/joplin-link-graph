@@ -64,7 +64,7 @@ function setMaxDistanceSetting(newVal) {
   // will automically trigger ui update of graph
   return webviewApi.postMessage({
     name: "set_setting",
-    key: "SETTING_MAX_SEPARATION_DEGREE",
+    key: "MAX_TREE_DEPTH",
     value: newVal,
   });
 }
@@ -73,8 +73,8 @@ function setMaxDistanceSetting(newVal) {
 function getMaxDistanceSetting() {
   return webviewApi.postMessage({
     name: "get_setting",
-    key: "SETTING_MAX_SEPARATION_DEGREE",
-  });
+    key: "MAX_TREE_DEPTH"
+  })
 }
 
 
@@ -95,7 +95,7 @@ var tooltip = d3
 
 
 function buildGraph(data) {
-  console.log('buildGraph was called!');
+  //console.log('buildGraph was called!');
 
   var margin = { top: 10, right: 10, bottom: 10, left: 10 };
   width = window.innerWidth;
@@ -124,14 +124,13 @@ function buildGraph(data) {
 
   const forceLink = d3
     .forceLink()
-    .distance(200)
     .id(function (d) {
       return d.id;
     })
 
   const forceCharge = d3
     .forceManyBody()
-    .strength(() => { return -200; })
+    .strength(() => { return -100; })
 
   if (data.graphIsSelectionBased) { forceLink.strength(setupForceLinkStrength) };
 
@@ -139,6 +138,8 @@ function buildGraph(data) {
     .forceSimulation()
     .force("link", forceLink)
     .force("charge", forceCharge)
+    //.force("x", d3.forceX())
+    //.force("y", d3.forceY())
     .force("nocollide", d3.forceCollide(data.nodeDistanceRatio * 200))
     .force("center", d3.forceCenter(width / 2, height / 2));
 
@@ -171,7 +172,7 @@ function buildGraph(data) {
 
 function updateGraph(data) {
 
-  console.log('updateGraph was called!');
+  //console.log('updateGraph was called!');
 
   // Remove nodes and links from the last graph
   svg.selectAll(".nodes").remove();
@@ -324,10 +325,12 @@ function updateGraph(data) {
 
   const circle = node.append("circle");
 
+  const color = d3.scaleOrdinal(d3.schemeCategory10);
+
   circle
-    .attr("id", function (d) {
-      return domNodeId(d.id, false);
-    })
+    .attr("id", function (d) { return domNodeId(d.id, false); })
+    .attr("r", d => { return 10 + 8 * Math.log10(d.totalLinks + 1); })
+    .attr("fill", d => color(d.parent_id))
     .classed("current-note", (d) => d.id === data.currentNoteID)
     .classed("adjacent-note", (d) => d.focused)
     .on("click", function (_, i) {
@@ -409,29 +412,6 @@ function updateGraph(data) {
 }
 
 
-function dragStart(d) {
-  //console.log('drag start');
-  simulation.alphaTarget(0.1).restart();
-  d.fx = d.x;
-  d.fy = d.y;
-}
-
-
-function drag(event, d) {
-  //console.log('dragging');
-  // simulation.alpha(0.5).restart()
-  d.fx = event.x;
-  d.fy = event.y;
-}
-
-
-function dragEnd(d) {
-  //console.log('drag end');
-  simulation.alphaTarget(0);
-  d.fx = null;
-  d.fy = null;
-}
-
 
 function setupForceLinkStrength(link) {
   const minDistance = minimalDistanceOfLink(link);
@@ -442,3 +422,23 @@ function setupForceLinkStrength(link) {
   return 0.1;
 }
 
+function dragStart(d) {
+
+  simulation.alphaTarget(0.1).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+
+function drag(event, d) {
+   //simulation.alpha(0.5).restart()
+  d.fx = event.x;
+  d.fy = event.y;
+}
+
+
+function dragEnd(d) {
+  simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}

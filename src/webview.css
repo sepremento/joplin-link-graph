@@ -47,7 +47,7 @@ button {
 }
 
 circle {
-  r: 10;
+  /*r: 10;*/
 }
 
 .tooltip {
@@ -72,22 +72,26 @@ circle {
 }
 
 .adjacent-note {
-  fill: var(--distance-1-primary-color);
-  r: 13;
+  /*fill: var(--distance-1-primary-color);*/
+  /*r: 13;*/
 }
 
 .current-note {
-  fill: var(--distance-0-primary-color);
-  r: 18;
+  stroke: var(--joplin-color2);
+  stroke-width: 3px;
+  /*fill: var(--distance-0-primary-color);*/
+  /*r: 18;*/
 }
 
 line {
   stroke: var(--distance-remaining-primary-color);
+  stroke-opacity: 0.6;
 }
 
 .adjacent-line {
   stroke: var(--distance-0-primary-color);
   stroke-width: 3px;
+  stroke-opacity: 0.6;
 }
 
 .node-label {
@@ -96,6 +100,7 @@ line {
 
 line.adjacent-to-hovered {
   stroke: var(--hover-secondary-color) !important;
+  stroke-opacity: 0.6;
 }
 
 circle.adjacent-to-hovered {
@@ -120,7 +125,7 @@ text.adjacent-to-hovered {
   --distance-remaining-primary-color: var(--joplin-background-color-hover3);
   --distance-remaining-secondary-color: var(--joplin-color4);
 
-  --hover-primary-color: #93f500;
+  --hover-primary-color: rgba(147, 245, 0, 0.5);
   --hover-secondary-color: var(--joplin-color-correct);
 }
 
@@ -131,7 +136,7 @@ text.adjacent-to-hovered {
 :not(#note_graph.mode-selection-based-graph) circle:not(.current-note):not(.adjacent-note) {
   stroke: var(--distance-remaining-secondary-color);
   stroke-width: 2;
-  fill: var(--distance-remaining-primary-color);
+  /*fill: var(--distance-remaining-primary-color);*/
 }
 
 /*

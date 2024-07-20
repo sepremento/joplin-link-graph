@@ -1,10 +1,12 @@
 import joplin from "api";
 
+
 export interface Notebook {
   id: string;
   title: string;
   parent_id: string;
 }
+
 
 async function getNotebooks(): Promise<Array<Notebook>> {
   var notebooks = [];
@@ -23,6 +25,7 @@ async function getNotebooks(): Promise<Array<Notebook>> {
 
   return notebooks;
 }
+
 
 function getFilteredNotebooks(
   notebooks: Array<Notebook>,
@@ -64,11 +67,13 @@ function getFilteredNotebooks(
   return filteredNotebooksArray
 }
 
+
 export interface Note {
   id: string;
   parent_id: string;
   title: string;
   links: Set<string>;
+  backlinks?: Array<string>;
   linkedToCurrentNote?: boolean;
   /**
    * (Minimal) distance of this note to current/selected note in Joplin
@@ -79,6 +84,7 @@ export interface Note {
   distanceToCurrentNote?: number;
 }
 
+
 interface JoplinNote {
   id: string;
   parent_id: string;
@@ -86,23 +92,31 @@ interface JoplinNote {
   body: string;
 }
 
+
 // Fetch notes
 export async function getNotes(
   selectedNote: string,
-  maxNotes: number,
   maxDegree: number,
-  namesToFilter: Array<string>,
-  shouldFilterChildren: boolean,
-  isIncludeFilter: boolean,
-  includeBacklinks: boolean
 ): Promise<Map<string, Note>> {
-  var notes = new Map<string, Note>();
+
+  //console.log('getNotes was called!')
+
+  const maxNotes = await joplin.settings.value("SETTING_MAX_NODES");
+  const notebooksToFilter = (await joplin.settings.value('NOTEBOOK_NAMES_TO_FILTER')).split(",");
+
+  const shouldFilterChildren = await joplin.settings.value("SETTING_FILTER_CHILD_NOTEBOOKS");
+  const includeBacklinks = await joplin.settings.value("SETTING_INCLUDE_BACKLINKS");
+  const isIncludeFilter = (await joplin.settings.value("SETTING_FILTER_IS_INCLUDE_FILTER")) === "include" ? true : false;
+
   const notebooks = await getNotebooks();
+
+  var notes = new Map<string, Note>();
   var filteredNotebooks = [];
-  if (namesToFilter.length >0) {
+
+  if (notebooksToFilter.length >0) {
     filteredNotebooks = getFilteredNotebooks(
       notebooks,
-      namesToFilter,
+      notebooksToFilter,
       shouldFilterChildren,
       isIncludeFilter
     )
@@ -112,11 +126,11 @@ export async function getNotes(
   } else {
     notes = await getAllNotes(maxNotes);
   }
-  if (namesToFilter.length > 0) {
+  if (notebooksToFilter.length > 0) {
     notes = await filterNotesByNotebookName(
       notes,
       notebooks,
-      namesToFilter,
+      notebooksToFilter,
       shouldFilterChildren,
       isIncludeFilter
     );
@@ -180,6 +194,7 @@ export async function filterNotesByNotebookName(
 async function getAllNotes(maxNotes: number): Promise<Map<string, Note>> {
   var allNotes = new Array<JoplinNote>();
   var page_num = 1;
+
   do {
     // `parent_id` is the ID of the notebook containing the note.
     var notes = await joplin.data.get(["notes"], {
@@ -198,6 +213,7 @@ async function getAllNotes(maxNotes: number): Promise<Map<string, Note>> {
   return noteMap;
 }
 
+
 function buildNote(joplinNote: JoplinNote): Note {
   const links: Set<string> = getAllLinksForNote(joplinNote.body);
   joplinNote.body = null;
@@ -206,8 +222,10 @@ function buildNote(joplinNote: JoplinNote): Note {
     title: joplinNote.title,
     parent_id: joplinNote.parent_id,
     links: links,
+    backlinks: new Array<string>()
   };
 }
+
 
 // Fetch all notes linked to a given source note, up to a maximum degree of
 // separation.
@@ -245,6 +263,9 @@ async function getLinkedNotes(
         backlinks = await filterBacklinks(backlinks, filteredNotebooks, isIncludeFilter);
       }
 
+      //console.log(`Backlinks for note "${note.title}" are: ${backlinks}`)
+      note.backlinks = backlinks;
+
       const allLinks = [
         ...note.links, // these are the forward-links
         ...backlinks,
@@ -267,6 +288,7 @@ async function getLinkedNotes(
 
   return noteMap;
 }
+
 
 async function filterBacklinks(
   backlinks: Array<string>,
@@ -293,6 +315,7 @@ async function filterBacklinks(
   return filteredBacklinks;
 }
 
+
 async function getNoteArray(ids: string[]): Promise<Array<JoplinNote>> {
   var promises = ids.map((id) =>
     joplin.data.get(["notes", id], {
@@ -308,6 +331,7 @@ async function getNoteArray(ids: string[]): Promise<Array<JoplinNote>> {
   const valid = results.filter((r) => !(r instanceof Error));
   return valid;
 }
+
 
 export function getAllLinksForNote(noteBody: string): Set<string> {
   const links = new Set<string>();
@@ -325,6 +349,7 @@ export function getAllLinksForNote(noteBody: string): Set<string> {
   return links;
 }
 
+
 async function getAllBacklinksForNote(noteId: string) {
   const links: string[] = [];
   let pageNum = 1;
@@ -340,10 +365,12 @@ async function getAllBacklinksForNote(noteId: string) {
   return links;
 }
 
+
 type Tag = {
   id: string;
   title: string;
 };
+
 
 export async function getNoteTags(noteId: string) {
   const tags: Tag[] = [];

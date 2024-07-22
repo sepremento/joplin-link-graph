@@ -2,76 +2,63 @@ import * as d3 from "d3";
 import * as userInput from "./user-input.js"
 
 
+var width = window.innerWidth;
+var height = window.innerHeight;
+var margin = { top: 10, right: 10, bottom: 10, left: 10 };
+
+
+// first functions are for communication with the plugin
+
 function poll() {
-  webviewApi.postMessage({ name: "poll" }).then((event) => {
-    if (event.data) {
-      buildGraph(event.data);
-    }
+  webviewApi.postMessage({
+    name: "poll"
+  }).then((event) => {
+    console.log('Received event: ', event.name);
+    if (event.name === "initialGraph") { graph.update(event.data); }
+    if (event.name === "noteSelectionChange") { graph.update(event.data); }
+    if (event.name === "settingsChange") { graph.update(event.data); }
+    if (event.name === "noteChange:title") { updateTitle(event.resp) }
+    if (event.name === "noteChange:links") { graph.update(event.data) }
     poll();
   });
 }
 
-
-poll();
-
-
 function update() {
-  webviewApi.postMessage({ name: "update" }).then((event) => {
+  webviewApi.postMessage({
+    name: "update"
+  }).then((event) => {
     if (event.data) {
-      buildGraph(event.data);
+      graph.update(event.data);
     }
   });
 }
-
 
 function processUserQuery(query) {
-  console.log(`processUserQuery is called!`)
-
-  webviewApi.postMessage({ name: "search-query", query: query }).then((event) => {
+  webviewApi.postMessage({
+    name: "search-query",
+    query: query 
+  }).then((event) => {
     if (event.data) {
-      buildGraph(event.data);
+      graph.update(event.data);
     }
   });
 }
 
-userInput.initQueryInput(processUserQuery);
-
-
 function getNoteTags(noteId) {
-  return webviewApi.postMessage({ name: "get_note_tags", id: noteId });
+  return webviewApi.postMessage({
+    name: "get_note_tags",
+    id: noteId
+  });
 }
 
-
-function addMarkerEndDef(defs, distance) {
-  const style = `var(--distance-${distance}-primary-color, var(--distance-remaining-primary-color))`;
-  _addMarkerEndDef(defs, distance, style);
+function openNote(event, i) {
+  if (event.ctrlKey) {
+    webviewApi.postMessage({
+      name: "navigateTo",
+      id: i.id
+    });
+  }
 }
-
-
-function _addMarkerEndDef(defs, name, style) {
-  defs
-    .append("marker")
-    .attr("id", `line-marker-end-${name}`)
-    .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 20)
-    .attr("refY", 0)
-    .attr("markerWidth", 15)
-    .attr("markerHeight", 15)
-    .attr("markerUnits", "userSpaceOnUse")
-    .attr("orient", "auto")
-    .style("fill", style)
-    .append("svg:path")
-    .attr("d", "M0,-5L10,0L0,5");
-}
-
-
-function minimalDistanceOfLink(link) {
-  return Math.min(
-    link.sourceDistanceToCurrentNode,
-    link.targetDistanceToCurrentNode
-  );
-}
-
 
 function setMaxDistanceSetting(newVal) {
   // will automically trigger ui update of graph
@@ -82,7 +69,6 @@ function setMaxDistanceSetting(newVal) {
   });
 }
 
-
 function getMaxDistanceSetting() {
   return webviewApi.postMessage({
     name: "get_setting",
@@ -90,6 +76,229 @@ function getMaxDistanceSetting() {
   })
 }
 
+// next graph functions
+
+function hoverNode(d, hovered) {
+  const hoveredNotesIds = new Set();
+  const linkSelector = `line[from="${d.id}"],line[to="${d.id}"]`
+
+  d3.select(`circle[note_id="${d.id}"]`).classed('hovered', hovered);
+  d3.selectAll(linkSelector)
+    .each((d, i, nodes) => {
+      hoveredNotesIds.add(nodes[i].getAttribute("from"));
+      hoveredNotesIds.add(nodes[i].getAttribute("to"));
+    })
+    .classed('highlighted', hovered);
+  hoveredNotesIds.forEach((id) => {
+    d3.select(`circle[note_id="${id}"]`).classed('highlighted', hovered);
+  });
+
+  return showTooltip(d, hovered)
+}
+
+async function showTooltip(d, hovered) {
+  const tooltip = d3.select('.tooltip');
+
+  if (!hovered) {
+    tooltip.classed("hidden", true);
+    return;
+  }
+
+  const hoveredBefore = d3.select("circle.hovered").node();
+  const tags = await getNoteTags(d.id);
+  const hoveredAfter = d3.select("circle.hovered").node();
+
+  // If we hovered something different in the meanwhile, don't show tooltip
+  if (hoveredAfter !== hoveredBefore) return;
+  if (tags.length === 0) return;
+
+  const rect = d3
+    .select("circle.hovered")
+    .node()
+    .getBoundingClientRect();
+
+  tooltip.classed("hidden", false);
+
+  tooltip.html(
+    tags.map(({id, title}) => `<div class="node-hover-tag">${title}</div>`)
+    .join(" ")
+  );
+
+  // center tooltip text at bottom of circle
+  // (Note: CSS tranform translate does not work with flex:wrap)
+  const leftPos = window.pageXOffset + rect.x + rect.width / 2 -
+    tooltip.node().getBoundingClientRect().width / 2;
+
+  tooltip
+    .style("left", `${leftPos >= 0 ? leftPos : 0}px`)
+    .style("top", `${window.pageYOffset + rect.y + rect.height}px`);
+}
+
+function chart() {
+  const color = d3.scaleOrdinal(d3.schemeTableau10)
+
+  // if tooltip div exists then select it otherwise create it
+  const tooltip = (
+    d3.select("#joplin-plugin-content > div.tooltip").node()
+    ? d3.select('div.tooltip')
+    : d3.select('#joplin-plugin-content')
+    .append("div")
+    .classed("tooltip", true)
+  ).classed("hidden", true);
+
+  const svg = d3.select("#note_graph")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("viewBox", [-width / 2, -height / 2, width, height])
+    .append("g");
+
+  svg
+    .append("marker")
+    .attr("id", "arrow")
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 20)
+    .attr("refY", 0)
+    .attr("markerWidth", 15)
+    .attr("markerHeight", 15)
+    .attr("markerUnits", "userSpaceOnUse")
+    .attr("orient", "auto")
+    .style("fill", "#999")
+    .append("svg:path")
+    .attr("d", "M0,-3L10,0L0,3");
+
+  const simulation = d3.forceSimulation()
+    .force("charge", d3.forceManyBody().strength(20))
+    .force("center", d3.forceCenter())
+    .force("link", d3.forceLink().id(d => d.id).distance(200))
+    .force("nocollide", d3.forceCollide(48))
+    .on("tick", ticked);
+
+  let link = svg.append("g")
+    .selectAll("line.edge");
+
+  let node = svg.append("g")
+    .selectAll("circle.node");
+
+  let nodeLabels = svg.append("g")
+      .attr("fill", "#000")
+    .selectAll("text");
+
+  function ticked() {
+    node.attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+
+    nodeLabels
+      .attr("x", d => d.x + 20)
+      .attr("y", d => d.y + 5)
+
+    link.attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+  }
+
+  const zoom_handler = d3.zoom()
+    .scaleExtent([0.1, 10])
+    .on("zoom", (ev) => zoomActions(svg, ev));
+
+  zoom_handler(d3.select("svg"));
+
+  function dragStart(ev) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    ev.subject.fx = ev.subject.x;
+    ev.subject.fy = ev.subject.y;
+  }
+
+  function drag(ev) {
+    ev.subject.fx = ev.x;
+    ev.subject.fy = ev.y;
+  }
+
+  function dragEnd(ev) {
+    if (!ev.active) simulation.alphaTarget(0);
+    ev.subject.fx = null;
+    ev.subject.fy = null;
+  }
+
+  function zoomActions(svg, event) {
+    svg.attr("transform", event.transform);
+  }
+
+  return Object.assign(svg.node(), {
+    update(data) {
+
+      const old = new Map(node.data().map(d => [d.id, d]));
+      const nodes = data.nodes.map(d => Object.assign(old.get(d.id) || {}, d));
+      const links = data.edges.map(d => Object.assign({}, d));
+
+      simulation.nodes(nodes);
+      simulation.force("link").links(links);
+      simulation.alpha(0.6).restart();
+
+      node = node
+        .data(nodes, d => d.id)
+        .join(enter => enter.append("circle")
+          .attr("note_id", d => d.id)
+          .attr("r", d => { return 10 + 8 * Math.log10(d.totalLinks + 1); })
+          .classed("node", true)
+          .on("click", (ev, i) => openNote(ev, i)) 
+          .on("mouseover", (_, i) => hoverNode(i, true))
+          .on("mouseout", (_, i) => hoverNode(i, false))
+          .call(
+            d3
+            .drag()
+            .on("start", dragStart)
+            .on("drag", drag)
+            .on("end", dragEnd)
+          )
+        )
+        .attr("fill", d => color(d.parent_id))
+        .classed('current-note', (d) => d.id === data.currentNoteID)
+
+      link = link
+        .data(links, d => `${d.source.id}\t${d.target.id}`)
+        .join("line")
+        .attr("from", d => d.source.id)
+        .attr("to", d => d.target.id)
+        .attr("marker-end", "url(#arrow)")
+        .classed("edge", true)
+        .classed("adjacent-line", (d) => d.focused);
+
+      // assign inward-link classes for backlinks
+      if (data.graphIsSelectionBased) {
+        link.attr("class", (d, i, nodes) => {
+          const sourceDist = d.sourceDistanceToCurrentNode;
+          const targetDist = d.targetDistanceToCurrentNode;
+          const inwardLink = sourceDist > targetDist;
+          const classes = [
+            ...nodes[i].classList,
+            ...(inwardLink ? ['inward-link'] : []),
+          ]
+          return classes.join(" ");
+        });
+      }
+      nodeLabels = nodeLabels
+        .data(nodes, d => d.id)
+        .join("text")
+        .attr("class", "node-label")
+        .attr("note_id", d => d.id)
+        .attr("fill", d => color(d.parent_id))
+        .attr("font-size", d => { return 10 + 6 * Math.log10(d.totalLinks + 1) + "px"; })
+        .text(d => d.title)
+        .attr("x", 20)
+        .attr("y", 5);
+    }
+  });
+}
+
+function updateTitle(data) {
+  d3.select(`text.node-label[note_id="${data.noteId}"]`).text(data.newTitle);
+}
+
+var graph = chart();
+
+userInput.initQueryInput(processUserQuery);
 
 getMaxDistanceSetting().then((v) => {
   // todo: shorten up, when top-level await available
@@ -97,366 +306,5 @@ getMaxDistanceSetting().then((v) => {
   update();
 });
 
+poll();
 
-var simulation, svg;
-var width, height;
-var tooltip = d3
-  .select("#joplin-plugin-content")
-  .append("div")
-  .classed("tooltip", true)
-  .classed("hidden", true);
-
-
-function buildGraph(data) {
-  //console.log('buildGraph was called!');
-
-  var margin = { top: 10, right: 10, bottom: 10, left: 10 };
-  width = window.innerWidth;
-  height = window.innerHeight;
-  tooltip.classed("hidden", true); // ensure proper popup reset
-
-  if (data.graphIsSelectionBased)
-    document
-      .querySelector("#note_graph")
-      .classList.add("mode-selection-based-graph");
-  else
-    document
-      .querySelector("#note_graph")
-      .classList.remove("mode-selection-based-graph");
-
-  //remove old graph
-  d3.select("#note_graph > svg").remove();
-
-  svg = d3
-    .select("#note_graph")
-    .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-  const forceLink = d3
-    .forceLink()
-    .distance(40)
-    .id(function (d) {
-      return d.id;
-    })
-
-  const forceCharge = d3
-    .forceManyBody()
-    .strength(() => { return -100; })
-
-  if (data.graphIsSelectionBased) { forceLink.strength(setupForceLinkStrength) };
-
-  simulation = d3
-    .forceSimulation()
-    .force("link", forceLink)
-    .force("charge", forceCharge)
-    .force("nocollide", d3.forceCollide(data.nodeDistanceRatio * 80))
-    .force("center", d3.forceCenter(width / 2, height / 2));
-
-  if (data.showLinkDirection) {
-    const defs = svg.append("defs");
-    // For now add arrows for ten layers (excl. center).
-    // TODO: make more dynamic
-    const COUNT_LAYERS = 10;
-    for (let i = 0; i < COUNT_LAYERS; i++) {
-      addMarkerEndDef(defs, i);
-    }
-    // marker, if whole graph is shown
-    addMarkerEndDef(defs, "default");
-    // on hover marker
-    _addMarkerEndDef(defs, "adjacent-to-hovered", "var(--hover-secondary-color");
-  }
-
-  //add zoom capabilities
-  var zoom_handler = d3.zoom().scaleExtent([0.1, 10]).on("zoom", zoom_actions);
-  zoom_handler(d3.select("svg"));
-
-  function zoom_actions(event) {
-    svg.attr("transform", event.transform);
-  }
-
-  updateGraph(data);
-}
-
-
-function updateGraph(data) {
-  console.log('updateGraph was called!');
-
-  // Remove nodes and links from the last graph
-  console.log(`SVG is: ${svg}`);
-
-  if (typeof(svg) === "undefined") { svg = d3.select('#note_graph > svg'); }
-
-  console.log(`SVG is: ${svg}`);
-
-  svg.selectAll(".nodes").remove();
-  svg.selectAll(".links").remove();
-
-  // Draw links.
-  var link = svg
-    .append("g")
-    .attr("class", "links")
-    .selectAll("line")
-    .data(data.edges)
-    .enter()
-    .append("line")
-    .classed("adjacent-line", (d) => d.focused)
-    .attr("id", (d) => { return domlinkId(d.source, d.target); })
-    .on("mouseover", (_ev, d) => { handleLinkHover(this, d, true); })
-    .on("mouseout", (_ev, d) => { handleLinkHover(this, d, false); });
-
-  // provide distance classes for links
-  if (data.graphIsSelectionBased) {
-    link.attr("class", function (d) {
-      const linkIsInward =
-        d.sourceDistanceToCurrentNode > d.targetDistanceToCurrentNode;
-      return [
-        ...this.classList,
-        `distance-${minimalDistanceOfLink(d)}`,
-        ...(linkIsInward ? ["inward-link"] : []),
-      ].join(" ");
-    });
-  }
-
-  configureDistanceMarkerEnd(link);
-
-  function domNodeId(nodeId, withSharp) {
-    // dom id needs to start with [a-zA-Z], hence we prefix with "id-"
-    return `${withSharp ? "#" : ""}id-${nodeId}`;
-  }
-
-  function domlinkId(sourceNodeId, targetNodeId, withSharp) {
-    return `${withSharp ? "#" : ""}id-${sourceNodeId}-to-id-${targetNodeId}`;
-  }
-
-  function domNodeLabelId(nodeId, withSharp) {
-    return `${withSharp ? "#" : ""}id-label-${nodeId}`;
-  }
-
-  function handleLinkHover(linkSelector, linkData, isEntered) {
-    d3.select(linkSelector).classed("hovered", isEntered);
-    // link hover will also trigger source and target node as well as labels hover
-    // lines
-    linkSelector = d3.select(linkSelector);
-    linkSelector.classed("adjacent-to-hovered", isEntered);
-    if (isEntered)
-      linkSelector.attr("marker-end", "url(#line-marker-end-adjacent-to-hovered)");
-    else configureDistanceMarkerEnd(linkSelector);
-
-    // nodes
-    // at this point d.source/targets holds *reference* to node data
-    d3.select(domNodeId(linkData.source.id, true)).classed(
-      "adjacent-to-hovered",
-      isEntered
-    );
-    d3.select(domNodeId(linkData.target.id, true)).classed(
-      "adjacent-to-hovered",
-      isEntered
-    );
-
-    // node labels
-    d3.select(domNodeLabelId(linkData.source.id, true)).classed(
-      "adjacent-to-hovered",
-      isEntered
-    );
-    d3.select(domNodeLabelId(linkData.target.id, true)).classed(
-      "adjacent-to-hovered",
-      isEntered
-    );
-  }
-
-  function handleNodeHover(nodeSelector, nodeId, isEntered) {
-    d3.select(nodeSelector).classed("hovered", isEntered);
-    // node hover delegates to handleLinkHover
-    // for all incoming and outcoming links
-    d3.selectAll(
-      `line[id^=id-${nodeId}-to-id-],line[id$=-to-id-${nodeId}]`
-    ).each(function (d, _i) {
-      handleLinkHover(this, d, isEntered);
-    });
-    return showNodeTooltip(nodeSelector, nodeId, isEntered);
-  }
-
-  async function showNodeTooltip(nodeSelector, nodeId, isEntered) {
-    if (!isEntered) {
-      tooltip.classed("hidden", true);
-      return;
-    }
-    const hoveredBefore = d3.select("circle.hovered").node();
-    const tags = await getNoteTags(nodeId);
-    const hoveredAfter = d3.select("circle.hovered").node();
-    // If we hovered something different in the meanwhile, don't show tooltip
-    if (hoveredAfter !== hoveredBefore) return;
-    if (tags.length === 0) return;
-    const rect = d3.select(nodeSelector).node().getBoundingClientRect();
-    tooltip.classed("hidden", false);
-    tooltip.html(
-      tags
-        .map(
-          ({ id, title }) =>
-            `<div data-tag-id="${id}" class="node-hover-tag">${title}</div>`
-        )
-        .join(" ")
-    );
-    // center tooltip text at bottom of circle
-    // (Note: CSS tranform translate does not work with flex:wrap)
-    const leftPos =
-      window.pageXOffset +
-      rect.x +
-      rect.width / 2 -
-      tooltip.node().getBoundingClientRect().width / 2;
-    tooltip
-      .style("left", `${leftPos >= 0 ? leftPos : 0}px`)
-      .style("top", `${window.pageYOffset + rect.y + rect.height}px`);
-  }
-
-  function configureDistanceMarkerEnd(link) {
-    if (data.showLinkDirection) {
-      link.attr("marker-end", (d) => {
-        if (data.graphIsSelectionBased) {
-          const minDistance = minimalDistanceOfLink(d);
-          return `url(#line-marker-end-${minDistance})`;
-        } else return `url(#line-marker-end-default)`;
-      });
-    }
-  }
-
-  // Draw nodes.
-  var node = svg
-    .append("g")
-    .attr("class", "nodes")
-    .selectAll("g")
-    .data(data.nodes)
-    .enter()
-    .append("g")//;
-    .call(
-      d3
-        .drag()
-        .on("start", dragStart)
-        .on("drag", drag)
-        .on("end", dragEnd)
-    );
-
-  const circle = node.append("circle");
-
-  const color = d3.scaleOrdinal(d3.schemeCategory10);
-
-  circle
-    .attr("id", function (d) { return domNodeId(d.id, false); })
-    .attr("r", d => { return 10 + 8 * Math.log10(d.totalLinks + 1); })
-    .attr("fill", d => color(d.parent_id))
-    .classed("current-note", (d) => d.id === data.currentNoteID)
-    .classed("adjacent-note", (d) => d.focused)
-    .on("click", function (_, i) {
-      webviewApi.postMessage({
-        name: "navigateTo",
-        id: i.id,
-      });
-    })
-    .on("mouseover", function (_evN, dN) {
-      handleNodeHover(this, dN.id, true);
-    })
-    .on("mouseout", function (_evN, dN) {
-      handleNodeHover(this, dN.id, false);
-    });
-
-  // provide distance classes for circles
-  if (data.graphIsSelectionBased) {
-    circle.attr("class", function (d) {
-      return [...this.classList, `distance-${d.distanceToCurrentNode}`].join(
-        " "
-      );
-    });
-  }
-
-  const nodeLabel = node.append("text");
-
-  nodeLabel
-    .attr("class", "node-label")
-    .attr("fill", d => color(d.parent_id))
-    .attr("id", function (d) {
-      return domNodeLabelId(d.id, false);
-    })
-    .attr("font-size", d => { return 10 + 6 * Math.log10(d.totalLinks + 1) + "px"; })
-    //.attr("font-size", data.nodeFontSize + "px")
-    .text(function (d) {
-      return d.title;
-    })
-    .attr("x", (d) => (d.id === data.currentNoteID ? 20 : 14))
-    .attr("y", 5);
-
-  // provide distance classes for node labels
-  if (data.graphIsSelectionBased) {
-    nodeLabel.attr("class", function (d) {
-      return [...this.classList, `distance-${d.distanceToCurrentNode}`].join(
-        " "
-      );
-    });
-  }
-
-  //  update simulation nodes, links, and alpha
-  simulation.nodes(data.nodes).on("tick", ticked);
-
-  simulation.force("link").links(data.edges);
-
-  simulation.alpha(1).alphaTarget(0).restart();
-
-  function ticked() {
-    node.attr("transform", function (d) {
-      if (d.id == data.currentNoteID) {
-        // Center the current note in the svg.
-        d.x = width / 2;
-        d.y = height / 2;
-      }
-      return "translate(" + d.x + "," + d.y + ")";
-    });
-
-    link
-      .attr("x1", function (d) {
-        return d.source.x;
-      })
-      .attr("y1", function (d) {
-        return d.source.y;
-      })
-      .attr("x2", function (d) {
-        return d.target.x;
-      })
-      .attr("y2", function (d) {
-        return d.target.y;
-      });
-  }
-}
-
-
-
-function setupForceLinkStrength(link) {
-  const minDistance = minimalDistanceOfLink(link);
-
-  if (minDistance === 0) { return 1; }
-  if (minDistance === 1) { return 0.5; }
-
-  return 0.1;
-}
-
-function dragStart(d) {
-
-  simulation.alphaTarget(0.1).restart();
-  d.fx = d.x;
-  d.fy = d.y;
-}
-
-
-function drag(event, d) {
-   //simulation.alpha(0.5).restart()
-  d.fx = event.x;
-  d.fy = event.y;
-}
-
-
-function dragEnd(d) {
-  simulation.alphaTarget(0);
-  d.fx = null;
-  d.fy = null;
-}

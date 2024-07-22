@@ -1,30 +1,3 @@
-.graph-content {
-  text-align: center;
-  background-color: var(--joplin-background-color) !important;
-}
-
-.graph-content > .container {
-  /* anchor the inline settings container */
-  position:relative;
-} 
-
-#user-input-container {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  display: flex;
-  align-items: center;
-  column-gap: 5px;
-}
-
-#user-input-container label, #user-input-container output {
-  user-select: none;
-}
-
-.header-area {
-  width: 100%
-}
-
 button {
   background-color: #339966;
   border: none;
@@ -36,8 +9,20 @@ button {
   font-size: 10px;
 }
 
-.header {
-  font-size: 20px;
+circle {
+  stroke: var(--joplin-color2);
+  stroke-width: 1px;
+}
+
+line {
+  stroke: var(--distance-remaining-primary-color);
+  stroke-opacity: 0.8;
+}
+
+.adjacent-line {
+  stroke: var(--distance-0-primary-color);
+  stroke-width: 3px;
+  stroke-opacity: 0.8;
 }
 
 .container {
@@ -46,8 +31,40 @@ button {
   font-family: var(--joplin-font-family);
 }
 
-circle {
-  /*r: 10;*/
+.current-note {
+  stroke: var(--joplin-color2);
+  stroke-width: 4px;
+}
+
+.graph-content {
+  text-align: center;
+  background-color: var(--joplin-background-color) !important;
+}
+
+.graph-content > .container {
+  /* anchor the inline settings container */
+  position:relative;
+} 
+
+.header-area {
+  width: 100%
+}
+
+.header {
+  font-size: 20px;
+}
+
+.highlighted {
+  fill: rgb(113, 165, 0);
+  stroke: rgb(70, 120, 0);
+}
+
+.hovered {
+  filter: brightness(50%);
+}
+
+.inward-link {
+  stroke-dasharray: 3;
 }
 
 .tooltip {
@@ -68,143 +85,31 @@ circle {
 .tooltip .node-hover-tag {
    background-color: var(--joplin-background-color-hover3); 
    border-radius: 100px;
-   padding: 5px;
-}
-
-.adjacent-note {
-  /*fill: var(--distance-1-primary-color);*/
-  /*r: 13;*/
-}
-
-.current-note {
-  stroke: var(--joplin-color2);
-  stroke-width: 3px;
-  /*fill: var(--distance-0-primary-color);*/
-  /*r: 18;*/
-}
-
-line {
-  stroke: var(--distance-remaining-primary-color);
-  stroke-opacity: 0.6;
-}
-
-.adjacent-line {
-  stroke: var(--distance-0-primary-color);
-  stroke-width: 3px;
-  stroke-opacity: 0.6;
-}
-
-.node-label {
-  /*fill: var(--joplin-color);*/
-}
-
-line.adjacent-to-hovered {
-  stroke: var(--hover-secondary-color) !important;
-  stroke-opacity: 0.6;
-}
-
-circle.adjacent-to-hovered {
-  fill: var(--hover-primary-color) !important;
-  stroke: unset !important;
-}
-
-circle.hovered {
-  filter: brightness(50%);
-}
-
-text.adjacent-to-hovered {
-  fill: var(--hover-secondary-color) !important;
+   padding: 3px 5px 3px 5px;
 }
 
 #note_graph {
-  /* distance colors for selection-based graph */
   --distance-0-primary-color: var(--joplin-color);
   --distance-0-secondary-color: var(--joplin-color4);
   --distance-1-primary-color: var(--joplin-color4);
   --distance-1-secondary-color: var(--joplin-color);
   --distance-remaining-primary-color: var(--joplin-background-color-hover3);
   --distance-remaining-secondary-color: var(--joplin-color4);
-
+  --distance-remaining-label-color: var(--joplin-color-faded);
   --hover-primary-color: rgba(147, 245, 0, 0.5);
   --hover-secondary-color: var(--joplin-color-correct);
 }
 
-/*
- * WHOLE GRAPH MODE [START]
- */
-
-:not(#note_graph.mode-selection-based-graph) circle:not(.current-note):not(.adjacent-note) {
-  stroke: var(--distance-remaining-secondary-color);
-  stroke-width: 2;
-  /*fill: var(--distance-remaining-primary-color);*/
+#user-input-container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  column-gap: 5px;
 }
 
-/*
- * WHOLE GRAPH MODE [END]
- */
-
-/*
- * DISTANCE-BASED GRAPH MODE [START]
- */
-
-#note_graph {
-    /* distance colors for selection-based graph */
-    --distance-0-primary-color: var(--joplin-color);
-    --distance-0-secondary-color: var(--joplin-color4);
-    --distance-1-primary-color: var(--joplin-color4);
-    --distance-1-secondary-color: var(--joplin-color);
-    --distance-remaining-primary-color: var(--joplin-background-color-hover3);
-    --distance-remaining-secondary-color: var(--joplin-color4);
-    --distance-remaining-label-color: var(--joplin-color-faded);
+#user-input-container label, #user-input-container output {
+  user-select: none;
 }
 
-#note_graph.mode-selection-based-graph line.distance-0 {
-  stroke: var(--distance-0-primary-color);
-  stroke-width: 3px;
-}
-
-#note_graph.mode-selection-based-graph line.distance-1 {
-  stroke: var(--distance-1-primary-color);
-}
-
-#note_graph.mode-selection-based-graph circle.distance-2 {
-  stroke: var(--distance-remaining-secondary-color);
-  stroke-width: 2;
-}
-
-#note_graph.mode-selection-based-graph circle:not(.distance-0):not(.distance-1):not(.distance-2) {
-  /*
-   * Make nodes far away from selected nodes less apparent:
-   * Remove stroke for circles > distance-2 in selection-based graphs
-   */
-  stroke: unset;
-  fill: var(--distance-remaining-primary-color);
-}
-
-#note_graph.mode-selection-based-graph .inward-link {
-  /* Mark links which are directed inwards/towards selected note */
-  stroke-dasharray: 3;
-}
-
-#note_graph.mode-selection-based-graph text.node-label.distance-0 {
-  /*font-size: 20px;*/
-  /*font-weight: bold;*/
-}
-
-#note_graph.mode-selection-based-graph text.node-label.distance-1 {
-  font-size: 18px;
-  fill: var(--distance-1-primary-color);
-}
-
-#note_graph.mode-selection-based-graph text.node-label.distance-2 {
-  /*font-size: 16px;*/
-}
-
-#note_graph.mode-selection-based-graph text.node-label:not(.distance-0):not(.distance-1):not(.distance-2) {
-  /*font-size: 14px;*/
-  /*fill: var(--distance-remaining-label-color);*/
-}
-
-/*
- * DISTANCE-BASED GRAPH MODE [END]
- */

@@ -5,11 +5,13 @@ function chromeRangeInputFix() {
   // not allowing slider to be dragged.
   // See https://stackoverflow.com/q/69490604
   // todo: is there a better solution?
-  document.querySelectorAll('input[type="range"]').forEach((input) => {
-    input.addEventListener("mousedown", () =>
-      window.getSelection().removeAllRanges()
-    );
-  });
+  document
+    .querySelectorAll('input[type="range"]')
+    .forEach((input) => {
+      input.addEventListener("mousedown", () =>
+        window.getSelection().removeAllRanges()
+      );
+    });
 }
 
 function initDistanceRangeInput(initialValue, handleChange) {
@@ -25,6 +27,7 @@ function initDistanceRangeInput(initialValue, handleChange) {
   >
   <output>${initialValue}</output>
   `;
+
   container.insertAdjacentHTML("beforeend", html);
   const input = container.querySelector("input[name='maxDistance']")
   input.addEventListener("input", function () {
@@ -36,10 +39,7 @@ function initDistanceRangeInput(initialValue, handleChange) {
   });
 }
 
-
 export function initQueryInput(handle) {
-  console.log('initQueryInput called!')
-
   const html = `
   <label for="userQuery">Query</label>
   <input name="userQuery" type="text" value="">
@@ -50,7 +50,6 @@ export function initQueryInput(handle) {
   const submitBtn = container.querySelector("#submit-query-btn");
   submitBtn.addEventListener("click", () => { handle(userQuery.value); })
 }
-
 
 export function init(initDistanceValue, handleDistanceChange, handleRedraw) {
   chromeRangeInputFix();

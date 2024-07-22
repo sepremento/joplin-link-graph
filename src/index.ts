@@ -10,6 +10,7 @@ let pollCb: any;
 let modelChanges = [];
 var prevData = {};
 var prevNoteLinks = [];
+var prevNoteTitle: string;
 var syncOngoing = false;
 
 
@@ -50,16 +51,11 @@ joplin.plugins.register({
 
 
 async function fetchData(maxDegree, fetchForNotes?) {
-  //console.log('fetchData was called!')
   // Load settings
   let selectedNote;
   const fetchForNoteIds = [];
   const getSetting = joplin.settings.value;
   const showLinkDirection = await joplin.settings.value("SETTING_SHOW_LINK_DIRECTION");
-
-
-  console.log(`fetchData: fetchFotNotes type is: ${typeof(fetchForNotes)}`);
-
 
   if (typeof(fetchForNotes) === "undefined") {
     selectedNote = await joplin.workspace.selectedNote();
@@ -68,8 +64,6 @@ async function fetchData(maxDegree, fetchForNotes?) {
     selectedNote = fetchForNotes[0];
     fetchForNotes.forEach((note) => { fetchForNoteIds.push(note.id); })
   }
-
-  console.log(`fetchForNoteIds: ${fetchForNoteIds}, selectedNote: ${selectedNote}`);
 
   const notes = await joplinData.getNotes(fetchForNoteIds, maxDegree);
 
@@ -126,7 +120,6 @@ async function fetchData(maxDegree, fetchForNotes?) {
   return data;
 }
 
-
 async function notifyUI() {
   // resolves Promise created in processWebviewMessage and sends a message back
   // to the WebView;
@@ -138,11 +131,9 @@ async function notifyUI() {
   }
 }
 
-
 async function recordModelChanges(event) {
   modelChanges.push(event);
 }
-
 
 async function drawPanel(panel) {
   await joplin.views.panels.setHtml(
@@ -160,7 +151,6 @@ async function drawPanel(panel) {
   `
   );
 }
-
 
 async function registerShowHideCommand(graphPanel) {
   // Register Show/Hide Graph Command and also create a toolbar button for this
@@ -192,7 +182,6 @@ async function registerShowHideCommand(graphPanel) {
   );
 }
 
-
 async function processWebviewMessage(message) {
   switch (message.name) {
     case "poll":
@@ -217,9 +206,8 @@ async function processWebviewMessage(message) {
   }
 }
 
-
 async function executeSearchQuery(query): Promise<GraphData> {
-  console.log(`Got a query: ${query}`)
+  //console.log(`Got a query: ${query}`)
   const maxDegree = await joplin.settings.value("MAX_TREE_DEPTH");
   const searchResult = await joplin.data.get(['search'], {
       query: query,
@@ -228,66 +216,101 @@ async function executeSearchQuery(query): Promise<GraphData> {
 
   const foundNotes = [...searchResult.items];
 
-  console.log(`type of foundNotes: ${typeof(foundNotes)}`)
+  //console.log(`type of foundNotes: ${typeof(foundNotes)}`)
 
   return fetchData(maxDegree, foundNotes);
 }
-
 
 
 async function updateUI(eventName: string) {
   //during sync do nothing;
   if (syncOngoing) { return; }
 
+  let resp = {};
   var dataChanged = false;
   const maxDegree = await joplin.settings.value("MAX_TREE_DEPTH");
 
   // Speed up the inital load by skipping the eventName switch.
   if (typeof data === "undefined") {
+    const selectedNote = await joplin.workspace.selectedNote();
     data = await fetchData(maxDegree);
+    eventName = "initialGraph";
+    prevNoteTitle = selectedNote.title;
     dataChanged = true;
   } else {
     if (eventName === "noteChange") {
       // Don't update the graph is the links in this note haven't changed.
       const selectedNote = await joplin.workspace.selectedNote();
-      var noteLinks = Array.from(joplinData.getAllLinksForNote(selectedNote.body));
+      const noteLinks = Array.from(joplinData.getAllLinksForNote(selectedNote.body));
 
-      if (!deepEqual(noteLinks, prevNoteLinks)) {
+      if (selectedNote.title !== prevNoteTitle) {
+        console.log(`New note title: ${selectedNote.title}`);
+
+        prevNoteTitle = selectedNote.title;
+        eventName += ":title";
+        resp = {
+          noteId: selectedNote.id,
+          newTitle: selectedNote.title
+        };
+        dataChanged = false;
+
+      } else if (!deepEqual(noteLinks, prevNoteLinks)) {
+        console.log('Note links array changed!');
+
         prevNoteLinks = noteLinks;
+        eventName += ":links";
+        data = await fetchData(maxDegree);
+        dataChanged = true;
+
+      } else {
+        console.log('Note changed, but not title or links');
+
+        eventName += ":other";
+        dataChanged = false;
+
+      }
+
+    } else if (eventName === "noteSelectionChange") {
+      const newSelectedNote = await joplin.workspace.selectedNote();
+      const noteIds = data.nodes.map(note => note.id);
+
+      data.currentNoteID = newSelectedNote.id;
+      prevNoteTitle = newSelectedNote.title;
+      prevNoteLinks = Array.from(joplinData.getAllLinksForNote(newSelectedNote.body));
+
+      // if draw all notes already then most of the time no need to refetch;
+      if (maxDegree == 0) {
+        // but if selected note was not in the previous data then refetch
+        if (!noteIds.includes(data.currentNoteID)) {
+          data = await fetchData(maxDegree);
+          dataChanged = true;
+
+        } else {
+          // otherwise just refocus the graph
+          data.edges.forEach((edge) => {
+            const shouldHaveFocus =
+              edge.source === newSelectedNote.id ||
+              edge.target === newSelectedNote.id;
+            edge.focused = shouldHaveFocus;
+          });
+          data.nodes.forEach((node) => {
+            node.focused = node.id === newSelectedNote.id;
+          });
+          dataChanged = true;
+        }
+      } else {
         data = await fetchData(maxDegree);
         dataChanged = true;
       }
-
-    } else if (eventName === "noteSelectionChange" && maxDegree == 0) {
-      //console.log('noteSelectionChange event and maxDegree == 0!')
-      // noteSelectionChange should just re-center the graph, no need to fetch all new data and compare.
-      const newSelectedNote = await joplin.workspace.selectedNote();
-
-      data.currentNoteID = newSelectedNote.id;
-
-      data.edges.forEach((edge) => {
-        const shouldHaveFocus =
-          edge.source === newSelectedNote.id ||
-          edge.target === newSelectedNote.id;
-        edge.focused = shouldHaveFocus;
-      });
-
-      data.nodes.forEach((node) => {
-        node.focused = node.id === newSelectedNote.id;
-      });
-
-      dataChanged = false;
-
-    } else {
-      //console.log('noteSelectionChange event and maxDegree > 0!')
+    } else if (eventName === "settingsChange") {
       data = await fetchData(maxDegree);
-      dataChanged = !deepEqual(data, prevData);
+      dataChanged = true;
     }
   }
-
   if (dataChanged) { prevData = data; }
 
-  recordModelChanges({ name: eventName, data: data });
+  console.log("eventName: ", eventName, "maxDegree: ", maxDegree)
+  recordModelChanges({ name: eventName, data: data, resp: resp});
   notifyUI();
 }
 

@@ -1,5 +1,22 @@
 const container = document.getElementById("user-input-container");
 
+let offsetX, offsetY;
+
+const move = (ev) => {
+  container.style.left = `${ev.clientX - offsetX}px`;
+  container.style.top = `${ev.clientY - offsetY}px`;
+}
+
+container.addEventListener('mousedown', (ev) => {
+  offsetX = ev.clientX - container.offsetLeft;
+  offsetY = ev.clientY - container.offsetTop;
+  document.addEventListener('mousemove', move);
+})
+
+container.addEventListener('mouseup', () => {
+  document.removeEventListener('mousemove', move);
+})
+
 function chromeRangeInputFix() {
   // workaround for chrome concerning range inputs,
   // not allowing slider to be dragged.
@@ -16,16 +33,18 @@ function chromeRangeInputFix() {
 
 function initDistanceRangeInput(initialValue, handleChange) {
   const html = `
-  <label for="maxDistance">Max. distance</label>
-  <input 
-    name="maxDistance"
-    type="range"
-    min="0"
-    value="${initialValue}"
-    max="5"
-    step="1"
-  >
-  <output>${initialValue}</output>
+  <div>
+    <label for="maxDistance">Max. distance</label>
+    <input 
+      name="maxDistance"
+      type="range"
+      min="0"
+      value="${initialValue}"
+      max="5"
+      step="1"
+    >
+    <output>${initialValue}</output>
+  </div>
   `;
 
   container.insertAdjacentHTML("beforeend", html);
@@ -41,9 +60,11 @@ function initDistanceRangeInput(initialValue, handleChange) {
 
 export function initQueryInput(handle) {
   const html = `
+  <div>
   <label for="userQuery">Query</label>
   <input name="userQuery" type="text" value="">
   <input type="button" id="submit-query-btn" value="Submit">
+  </div>
   `
   container.insertAdjacentHTML("beforeend", html);
   const userQuery = container.querySelector("input[name='userQuery']");

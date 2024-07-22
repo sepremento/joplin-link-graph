@@ -106,7 +106,14 @@ line {
   left: 10px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   column-gap: 5px;
+  background-color: var(--joplin-background-color2);
+  color: var(--joplin-color2);
+  border-radius: 5px;
+  padding: 6px;
+  opacity: 0.8;
+  width: 300px;
 }
 
 #user-input-container label, #user-input-container output {

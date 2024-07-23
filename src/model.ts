@@ -18,9 +18,7 @@ export interface Node {
 export interface GraphData {
   nodes: Node[];
   edges: Edge[];
-  currentNoteID: string;
-  nodeFontSize: number;
-  nodeDistanceRatio: number;
+  spanningTree: Array<string>;
   showLinkDirection: boolean;
   graphIsSelectionBased: boolean; // maxDegree > 0
 }

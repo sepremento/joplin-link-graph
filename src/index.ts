@@ -53,15 +53,15 @@ joplin.plugins.register({
 async function fetchData(maxDegree, fetchForNotes?) {
   // Load settings
   let selectedNote;
-  const fetchForNoteIds = [];
+  const fetchForNoteIds: Array<string> = [];
   const getSetting = joplin.settings.value;
   const showLinkDirection = await joplin.settings.value("SETTING_SHOW_LINK_DIRECTION");
 
   if (typeof(fetchForNotes) === "undefined") {
-    selectedNote = await joplin.workspace.selectedNote();
-    fetchForNoteIds.push(selectedNote.id);
+    const selectedNoteIds = await joplin.workspace.selectedNoteIds();
+    console.log(`notes selected:`, selectedNoteIds);
+    fetchForNoteIds.push(...selectedNoteIds);
   } else {
-    selectedNote = fetchForNotes[0];
     fetchForNotes.forEach((note) => { fetchForNoteIds.push(note.id); })
   }
 
@@ -70,10 +70,7 @@ async function fetchData(maxDegree, fetchForNotes?) {
   const data: GraphData = {
     nodes: [],
     edges: [],
-    currentNoteID: selectedNote.id,
-    nodeFontSize: await joplin.settings.value("SETTING_NODE_FONT_SIZE"),
-    nodeDistanceRatio:
-      (await joplin.settings.value("SETTING_NODE_DISTANCE")) / 100.0,
+    spanningTree: fetchForNoteIds,
     showLinkDirection,
     graphIsSelectionBased: maxDegree > 0
   };
@@ -93,13 +90,13 @@ async function fetchData(maxDegree, fetchForNotes?) {
         target: link,
         sourceDistanceToCurrentNode: notes.get(id).distanceToCurrentNote,
         targetDistanceToCurrentNode: notes.get(link).distanceToCurrentNote,
-        focused: id === selectedNote.id || link === selectedNote.id,
+        focused: fetchForNoteIds.includes(id) || fetchForNoteIds.includes(link),
       });
 
       // Mark nodes that are adjacent to the currently selected note.
-      if (id === selectedNote.id) {
+      if (fetchForNoteIds.includes(id)) {
         notes.get(link).linkedToCurrentNote = true;
-      } else if (link == selectedNote.id) {
+      } else if (fetchForNoteIds.includes(link)) {
         notes.get(id).linkedToCurrentNote = true;
       } else {
         const l = notes.get(link);
@@ -271,30 +268,38 @@ async function updateUI(eventName: string) {
       }
 
     } else if (eventName === "noteSelectionChange") {
-      const newSelectedNote = await joplin.workspace.selectedNote();
-      const noteIds = data.nodes.map(note => note.id);
+      const selectedNoteIds = await joplin.workspace.selectedNoteIds();
+      const graphNoteIds = data.nodes.map(note => note.id);
 
-      data.currentNoteID = newSelectedNote.id;
-      prevNoteTitle = newSelectedNote.title;
-      prevNoteLinks = Array.from(joplinData.getAllLinksForNote(newSelectedNote.body));
+      if (selectedNoteIds.length === 1) {
+        const newSelectedNote = await joplin.workspace.selectedNote();
 
-      // if draw all notes already then most of the time no need to refetch;
+        data.spanningTree = [newSelectedNote.id];
+        prevNoteTitle = newSelectedNote.title;
+        prevNoteLinks = Array.from(joplinData.getAllLinksForNote(newSelectedNote.body));
+      } else {
+        data.spanningTree = selectedNoteIds;
+        prevNoteTitle = undefined;
+        prevNoteLinks = undefined;
+      }
+
+        // if draw all notes already then most of the time no need to refetch;
       if (maxDegree == 0) {
         // but if selected note was not in the previous data then refetch
-        if (!noteIds.includes(data.currentNoteID)) {
-          data = await fetchData(maxDegree);
+        if (!data.spanningTree.every(n => graphNoteIds.includes(n))) {
+          data = await fetchData(maxDegree, data.spanningTree);
           dataChanged = true;
 
         } else {
           // otherwise just refocus the graph
           data.edges.forEach((edge) => {
             const shouldHaveFocus =
-              edge.source === newSelectedNote.id ||
-              edge.target === newSelectedNote.id;
+              data.spanningTree.includes(edge.source) ||
+              data.spanningTree.includes(edge.target);
             edge.focused = shouldHaveFocus;
           });
           data.nodes.forEach((node) => {
-            node.focused = node.id === newSelectedNote.id;
+            node.focused = data.spanningTree.includes(node.id);
           });
           dataChanged = true;
         }

@@ -254,7 +254,7 @@ function chart() {
           )
         )
         .attr("fill", d => color(d.parent_id))
-        .classed('current-note', (d) => d.id === data.currentNoteID)
+        .classed('current-note', (d) => data.spanningTree.includes(d.id))
 
       link = link
         .data(links, d => `${d.source.id}\t${d.target.id}`)

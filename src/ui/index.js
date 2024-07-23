@@ -13,7 +13,7 @@ function poll() {
   webviewApi.postMessage({
     name: "poll"
   }).then((event) => {
-    console.log('Received event: ', event.name);
+    //console.log('Received event: ', event.name);
     if (event.name === "initialGraph") { graph.update(event.data); }
     if (event.name === "noteSelectionChange") { graph.update(event.data); }
     if (event.name === "settingsChange") { graph.update(event.data); }
@@ -233,7 +233,14 @@ function chart() {
       const links = data.edges.map(d => Object.assign({}, d));
 
       simulation.nodes(nodes);
-      simulation.force("link").links(links);
+      simulation
+        .force("link")
+        .links(links)
+        .distance(data.graphSettings.linkDistance)
+        .strength(data.graphSettings.linkStrength / 100);
+      simulation.force("charge").strength(data.graphSettings.chargeStrength);
+      simulation.force("center").strength(data.graphSettings.centerStrength /100);
+      simulation.force("nocollide").radius(data.graphSettings.collideRadius);
       simulation.alpha(0.6).restart();
 
       node = node
@@ -266,7 +273,7 @@ function chart() {
         .classed("adjacent-line", (d) => d.focused);
 
       // assign inward-link classes for backlinks
-      if (data.graphIsSelectionBased) {
+      if (data.graphSettings.isSelectionBased) {
         link.attr("class", (d, i, nodes) => {
           const sourceDist = d.sourceDistanceToCurrentNode;
           const targetDist = d.targetDistanceToCurrentNode;

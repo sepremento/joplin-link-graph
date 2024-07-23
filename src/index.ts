@@ -1,7 +1,7 @@
 import joplin from "api";
 import * as joplinData from "./data";
 import { registerSettings } from "./settings";
-import { Edge, Node, GraphData } from "./model";
+import { Edge, Node, GraphData, GraphSettings } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
 var deepEqual = require("fast-deep-equal");
 
@@ -55,11 +55,10 @@ async function fetchData(maxDegree, fetchForNotes?) {
   let selectedNote;
   const fetchForNoteIds: Array<string> = [];
   const getSetting = joplin.settings.value;
-  const showLinkDirection = await joplin.settings.value("SETTING_SHOW_LINK_DIRECTION");
 
   if (typeof(fetchForNotes) === "undefined") {
     const selectedNoteIds = await joplin.workspace.selectedNoteIds();
-    console.log(`notes selected:`, selectedNoteIds);
+    //console.log(`notes selected:`, selectedNoteIds);
     fetchForNoteIds.push(...selectedNoteIds);
   } else {
     fetchForNotes.forEach((note) => { fetchForNoteIds.push(note.id); })
@@ -67,13 +66,22 @@ async function fetchData(maxDegree, fetchForNotes?) {
 
   const notes = await joplinData.getNotes(fetchForNoteIds, maxDegree);
 
+  const graphSettings: GraphSettings = {
+    isSelectionBased: maxDegree > 0,
+    chargeStrength: await joplin.settings.value('CHARGE_STRENGTH'),
+    centerStrength: await joplin.settings.value('CENTER_STRENGTH'),
+    collideRadius: await joplin.settings.value('COLLIDE_RADIUS'),
+    linkDistance: await joplin.settings.value('LINK_DISTANCE'),
+    linkStrength: await joplin.settings.value('LINK_STRENGTH')
+  }
+
   const data: GraphData = {
     nodes: [],
     edges: [],
     spanningTree: fetchForNoteIds,
-    showLinkDirection,
-    graphIsSelectionBased: maxDegree > 0
+    graphSettings: graphSettings
   };
+
 
   notes.forEach((note, id) => {
     for (let link of note.links) {
@@ -230,10 +238,13 @@ async function updateUI(eventName: string) {
   // Speed up the inital load by skipping the eventName switch.
   if (typeof data === "undefined") {
     const selectedNote = await joplin.workspace.selectedNote();
+
     data = await fetchData(maxDegree);
+
     eventName = "initialGraph";
     prevNoteTitle = selectedNote.title;
     dataChanged = true;
+
   } else {
     if (eventName === "noteChange") {
       // Don't update the graph is the links in this note haven't changed.
@@ -241,7 +252,7 @@ async function updateUI(eventName: string) {
       const noteLinks = Array.from(joplinData.getAllLinksForNote(selectedNote.body));
 
       if (selectedNote.title !== prevNoteTitle) {
-        console.log(`New note title: ${selectedNote.title}`);
+        //console.log(`New note title: ${selectedNote.title}`);
 
         prevNoteTitle = selectedNote.title;
         eventName += ":title";
@@ -252,7 +263,7 @@ async function updateUI(eventName: string) {
         dataChanged = false;
 
       } else if (!deepEqual(noteLinks, prevNoteLinks)) {
-        console.log('Note links array changed!');
+        //console.log('Note links array changed!');
 
         prevNoteLinks = noteLinks;
         eventName += ":links";
@@ -260,7 +271,7 @@ async function updateUI(eventName: string) {
         dataChanged = true;
 
       } else {
-        console.log('Note changed, but not title or links');
+        //console.log('Note changed, but not title or links');
 
         eventName += ":other";
         dataChanged = false;
@@ -314,7 +325,7 @@ async function updateUI(eventName: string) {
   }
   if (dataChanged) { prevData = data; }
 
-  console.log("eventName: ", eventName, "maxDegree: ", maxDegree)
+  //console.log("eventName: ", eventName, "maxDegree: ", maxDegree)
   recordModelChanges({ name: eventName, data: data, resp: resp});
   notifyUI();
 }

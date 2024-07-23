@@ -16,23 +16,7 @@ export async function registerSettings() {
   });
 
   await joplin.settings.registerSettings({
-    SETTING_NODE_FONT_SIZE: {
-      value: DEFAULT_NODE_FONT_SIZE,
-      type: SettingItemType.Int,
-      section: sectionName,
-      public: true,
-      label: "Size of the node label font",
-      description: "Font size for the label of nodes on the graph..",
-    },
-    SETTING_NODE_DISTANCE: {
-      value: 100,
-      type: SettingItemType.Int,
-      section: sectionName,
-      public: true,
-      label: "Distance between nodes",
-      description: "The visual distance between nodes in the graph.",
-    },
-    SETTING_MAX_NODES: {
+    MAX_NODES: {
       value: DEFAULT_MAX_NOTES,
       type: SettingItemType.Int,
       section: sectionName,
@@ -41,7 +25,7 @@ export async function registerSettings() {
       description:
         "Maximum number of nodes shown in the graph. Most recent nodes have priority.",
     },
-    SETTING_FILTER_IS_INCLUDE_FILTER: {
+    FILTER_IS_INCLUDE_FILTER: {
       value: "exclude",
       type: SettingItemType.String,
       isEnum: true,
@@ -91,14 +75,55 @@ export async function registerSettings() {
       description:
         "Backlinks are links that other notes have to the selected note. Note: This setting is targeted towards selection-based graphs with degree of separation > 0.",
     },
-    SETTING_SHOW_LINK_DIRECTION: {
-      value: DEFAULT_SHOW_LINK_DIRECTION,
-      type: SettingItemType.Bool,
+    CHARGE_STRENGTH: {
+      advanced: true,
+      value: 20,
+      type: SettingItemType.Int,
       section: sectionName,
       public: true,
-      label: "Show note link direction arrows",
+      label: "Electric charge force strength",
       description:
-        "With more complex graphs, arrows showing the link direction from note to note can be quite helpful.",
-    }
+        "Positive number defines gravity for nodes, negative number defines electric charge repulsion for nodes",
+    },
+    CENTER_STRENGTH: {
+      advanced: true,
+      value: 100,
+      type: SettingItemType.Int,
+      section: sectionName,
+      public: true,
+      label: "Center force strength",
+      description:
+        "",
+    },
+    COLLIDE_RADIUS: {
+      advanced: true,
+      value: 48,
+      type: SettingItemType.Int,
+      section: sectionName,
+      public: true,
+      label: "Collide force radius",
+      description:
+        "",
+    },
+    LINK_DISTANCE: {
+      advanced: true,
+      value: 200,
+      type: SettingItemType.Int,
+      section: sectionName,
+      public: true,
+      label: "Link force distance",
+      description:
+        "",
+    },
+    LINK_STRENGTH: {
+      advanced: true,
+      value: 100,
+      type: SettingItemType.Int,
+      section: sectionName,
+      public: true,
+      label: "Link force strength",
+      description:
+        "",
+    },
   });
 }

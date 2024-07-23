@@ -19,7 +19,14 @@ export interface GraphData {
   nodes: Node[];
   edges: Edge[];
   spanningTree: Array<string>;
-  showLinkDirection: boolean;
-  graphIsSelectionBased: boolean; // maxDegree > 0
+  graphSettings: GraphSettings;
 }
 
+export interface GraphSettings {
+  isSelectionBased: boolean;  // maxDegree > 0
+  chargeStrength: number;
+  centerStrength: number;
+  collideRadius: number;
+  linkDistance: number;
+  linkStrength: number;
+}

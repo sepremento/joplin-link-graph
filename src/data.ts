@@ -101,12 +101,12 @@ export async function getNotes(
 
   //console.log('getNotes was called!')
 
-  const maxNotes = await joplin.settings.value("SETTING_MAX_NODES");
+  const maxNotes = await joplin.settings.value("MAX_NODES");
   const notebooksToFilter = (await joplin.settings.value('NOTEBOOK_NAMES_TO_FILTER')).split(",");
 
   const shouldFilterChildren = await joplin.settings.value("SETTING_FILTER_CHILD_NOTEBOOKS");
   const includeBacklinks = await joplin.settings.value("SETTING_INCLUDE_BACKLINKS");
-  const isIncludeFilter = (await joplin.settings.value("SETTING_FILTER_IS_INCLUDE_FILTER")) === "include" ? true : false;
+  const isIncludeFilter = (await joplin.settings.value("FILTER_IS_INCLUDE_FILTER")) === "include" ? true : false;
 
   const notebooks = await getNotebooks();
 

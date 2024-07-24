@@ -3,6 +3,23 @@ circle {
   stroke-width: 1px;
 }
 
+input[type="button"] {
+  position: absolute;
+  right: 10px;
+  font-size: 12px;
+  background-color: var(--joplin-color-correct);
+  border: none;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+input[type="text"] {
+  background: none;
+  color: var(--joplin-color);
+  border: 1px solid var(--joplin-color);
+  border-radius: 3px;
+}
+
 line {
   stroke: var(--distance-remaining-primary-color);
   stroke-opacity: 0.8;
@@ -20,8 +37,8 @@ line {
 }
 
 .draggable-field {
-  height: 15px;
-  width: 30%;
+  height: 20px;
+  width: 35px;
   background-image: repeating-linear-gradient(45deg, #ccc, #ccc 5px, #eee 5px, #eee 10px);
   opacity: 0.5;
   margin: 0 0 5px 0;
@@ -30,6 +47,11 @@ line {
 .draggable-field:hover {
   cursor: grab;
   filter: brightness(50%);
+}
+
+.folder {
+  text-align: left;
+  margin: 3px 0;
 }
 
 .graph-content {
@@ -106,7 +128,7 @@ line {
 #redraw-btn {
   background-color: var(--joplin-color-correct);
   border: none;
-  color: var(-joplin-color5);
+  color: var(--joplin-color5);
   padding: 5px;
   margin: 10px 0;
   font-size: 12px;
@@ -132,5 +154,6 @@ line {
 
 #user-input-container label, #user-input-container output {
   user-select: none;
+  margin-right: 5px;
 }
 

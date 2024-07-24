@@ -1,21 +1,43 @@
+const parent = document.getElementById('container');
 const container = document.getElementById("user-input-container");
+const legend = document.getElementById('legend');
+const draggables = document.querySelectorAll('div.draggable-field');
 
 let offsetX, offsetY;
 
-const move = (ev) => {
-  container.style.left = `${ev.clientX - offsetX}px`;
-  container.style.top = `${ev.clientY - offsetY}px`;
+for (const draggable of draggables) {
+  draggable.addEventListener('mousedown', drag);
+  draggable.addEventListener('mouseup', (ev) => {
+    document.removeEventListener('mousemove', move)
+  }) 
 }
 
-container.addEventListener('mousedown', (ev) => {
-  offsetX = ev.clientX - container.offsetLeft;
-  offsetY = ev.clientY - container.offsetTop;
-  document.addEventListener('mousemove', move);
-})
+function drag(ev) {
+  if (!ev.currentTarget.classList.contains('draggable-field')) { return; };
 
-container.addEventListener('mouseup', () => {
-  document.removeEventListener('mousemove', move);
-})
+  offsetX = ev.clientX - ev.currentTarget.parentElement.offsetLeft;
+  offsetY = ev.clientY - ev.currentTarget.parentElement.offsetTop;
+  document.addEventListener('mousemove', move);
+}
+
+function move(ev) {
+  if (!ev.target.classList.contains('draggable-field')) { return; };
+
+  var newX = ev.clientX - offsetX;
+  var newY = ev.clientY - offsetY;
+
+  if (newX < 0) { newX = 0; }
+  if (newX + ev.target.parentNode.offsetWidth > parent.offsetWidth) {
+    newX = parent.offsetWidth - ev.target.parentNode.offsetWidth;
+  }
+  if (newY < 0) { newY = 0; }
+  if (newY + ev.target.parentNode.offsetHeight > parent.offsetHeight) {
+    newY = parent.offsetHeight - ev.target.parentNode.offsetHeight;
+  }
+
+  ev.target.parentNode.style.left = `${newX}px`;
+  ev.target.parentNode.style.top = `${newY}px`;
+}
 
 function chromeRangeInputFix() {
   // workaround for chrome concerning range inputs,
@@ -76,6 +98,6 @@ export function init(initDistanceValue, handleDistanceChange, handleRedraw) {
   chromeRangeInputFix();
   initDistanceRangeInput(initDistanceValue, handleDistanceChange);
   document
-    .getElementById("redrawButton")
+    .getElementById("redraw-btn")
     .addEventListener("click", handleRedraw);
 }

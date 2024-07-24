@@ -185,6 +185,9 @@ function chart() {
       .attr("fill", "#000")
     .selectAll("text");
 
+  let legend = d3.select('#legend')
+    .selectAll("div.folder")
+
   function ticked() {
     node.attr("cx", d => d.x)
         .attr("cy", d => d.y)
@@ -232,6 +235,10 @@ function chart() {
       const old = new Map(node.data().map(d => [d.id, d]));
       const nodes = data.nodes.map(d => Object.assign(old.get(d.id) || {}, d));
       const links = data.edges.map(d => Object.assign({}, d));
+
+      const parents = new Array(data.nodes.length);
+      for (let i=0; i<nodes.length; ++i) { parents[i] = nodes[i].parent_id; }
+      const folders = distinct(parents);
 
       simulation.nodes(nodes);
       simulation
@@ -296,7 +303,13 @@ function chart() {
         .text(d => d.title)
         .call(wrap, 200)
         .attr("x", 0)
-        .attr("y", 5)
+        .attr("y", 15);
+
+      legend = legend
+        .data(folders, d => d)
+        .join("div")
+        .style("color", d => color(d))
+        .text(d => d);
     }
   });
 }
@@ -331,6 +344,14 @@ function updateTitle(data) {
     .text(data.newTitle)
     .call(wrap, 200);
 }
+
+function distinct( arr ) {
+  var j = {};
+  for (let v of arr) { j[v] = v; };
+  const result = new Array(Object.keys(j).length);
+  for (let i=0; i < result.length; ++i) { result[i] = Object.keys(j)[i]; }
+  return result
+} 
 
 var graph = chart();
 

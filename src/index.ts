@@ -147,13 +147,16 @@ async function drawPanel(panel) {
     panel,
     `
     <div class="graph-content">
-      <div class="header-area">
-        <button id="redrawButton">Redraw Graph</button>
-        <p class="header">Note Graph</p>
+      <div id="container">
+        <div id="user-input-container">
+          <div class="draggable-field"></div>
+          <button id="redraw-btn">Redraw Graph</button>
+        </div>
+        <div id="legend">
+          <div class="draggable-field"></div>
+        </div>
+        <div id="note_graph"/></div>
       </div>
-    <div class="container">
-      <div id="user-input-container"></div>
-      <div id="note_graph"/></div>
     </div>
   `
   );

@@ -58,7 +58,6 @@ async function fetchData(maxDegree, fetchForNotes?) {
 
   if (typeof(fetchForNotes) === "undefined") {
     const selectedNoteIds = await joplin.workspace.selectedNoteIds();
-    //console.log(`notes selected:`, selectedNoteIds);
     fetchForNoteIds.push(...selectedNoteIds);
   } else {
     for (const note of fetchForNotes) {
@@ -118,6 +117,7 @@ async function fetchData(maxDegree, fetchForNotes?) {
       id: id,
       title: note.title,
       parent_id: note.parent_id,
+      folder: note.folder,
       focused: note.linkedToCurrentNote,
       totalLinks: note.backlinks.length + note.links.size,
       distanceToCurrentNode: note.distanceToCurrentNote
@@ -217,7 +217,6 @@ async function processWebviewMessage(message) {
 }
 
 async function executeSearchQuery(query): Promise<GraphData> {
-  //console.log(`Got a query: ${query}`)
   const maxDegree = await joplin.settings.value("MAX_TREE_DEPTH");
   const searchResult = await joplin.data.get(['search'], {
       query: query,
@@ -226,7 +225,6 @@ async function executeSearchQuery(query): Promise<GraphData> {
 
   const foundNotes = [...searchResult.items];
 
-  //console.log(`type of foundNotes: ${typeof(foundNotes)}`)
 
   return fetchData(maxDegree, foundNotes);
 }
@@ -257,7 +255,6 @@ async function updateUI(eventName: string) {
       const noteLinks = Array.from(joplinData.getAllLinksForNote(selectedNote.body));
 
       if (selectedNote.title !== prevNoteTitle) {
-        //console.log(`New note title: ${selectedNote.title}`);
 
         prevNoteTitle = selectedNote.title;
         eventName += ":title";
@@ -268,7 +265,6 @@ async function updateUI(eventName: string) {
         dataChanged = false;
 
       } else if (!deepEqual(noteLinks, prevNoteLinks)) {
-        //console.log('Note links array changed!');
 
         prevNoteLinks = noteLinks;
         eventName += ":links";
@@ -276,7 +272,6 @@ async function updateUI(eventName: string) {
         dataChanged = true;
 
       } else {
-        //console.log('Note changed, but not title or links');
 
         eventName += ":other";
         dataChanged = false;
@@ -330,7 +325,6 @@ async function updateUI(eventName: string) {
   }
   if (dataChanged) { prevData = data; }
 
-  //console.log("eventName: ", eventName, "maxDegree: ", maxDegree)
   recordModelChanges({ name: eventName, data: data, resp: resp});
   notifyUI();
 }

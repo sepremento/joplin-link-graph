@@ -13,7 +13,6 @@ function poll() {
   webviewApi.postMessage({
     name: "poll"
   }).then((event) => {
-    //console.log('Received event: ', event.name);
     if (event.name === "initialGraph") { graph.update(event.data); }
     if (event.name === "noteSelectionChange") { graph.update(event.data); }
     if (event.name === "settingsChange") { graph.update(event.data); }
@@ -237,7 +236,7 @@ function chart() {
       const links = data.edges.map(d => Object.assign({}, d));
 
       const parents = new Array(data.nodes.length);
-      for (let i=0; i<nodes.length; ++i) { parents[i] = nodes[i].parent_id; }
+      for (let i=0; i<nodes.length; ++i) { parents[i] = nodes[i].folder; }
       const folders = distinct(parents);
 
       simulation.nodes(nodes);
@@ -268,7 +267,7 @@ function chart() {
             .on("end", dragEnd)
           )
         )
-        .attr("fill", d => color(d.parent_id))
+        .attr("fill", d => color(d.folder))
         .classed('current-note', (d) => data.spanningTree.includes(d.id))
 
       link = link
@@ -298,7 +297,7 @@ function chart() {
         .join("text")
         .attr("class", "node-label")
         .attr("note_id", d => d.id)
-        .attr("fill", d => color(d.parent_id))
+        .attr("fill", d => color(d.folder))
         .attr("font-size", d => { return 10 + 6 * Math.log10(d.totalLinks + 1) + "px"; })
         .text(d => d.title)
         .call(wrap, 200)
@@ -308,6 +307,7 @@ function chart() {
       legend = legend
         .data(folders, d => d)
         .join("div")
+        .classed('folder', true)
         .style("color", d => color(d))
         .text(d => d);
     }

@@ -10,6 +10,7 @@ export interface Node {
   id: string;
   title: string;
   parent_id: string;
+  folder: string;
   focused: boolean;
   totalLinks: number;
   distanceToCurrentNode?: number;

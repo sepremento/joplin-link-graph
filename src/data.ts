@@ -2,14 +2,13 @@ import joplin from "api";
 
 
 export interface Notebook {
-  id: string;
   title: string;
   parent_id: string;
 }
 
 
-async function getNotebooks(): Promise<Array<Notebook>> {
-  var notebooks = [];
+async function getNotebooks(): Promise<Map<string, Notebook>> {
+  var notebooks = new Map<string, Notebook>();
   var page_num = 1;
   do {
     var notebooksBatch = await joplin.data.get(
@@ -19,7 +18,12 @@ async function getNotebooks(): Promise<Array<Notebook>> {
         page: page_num,
       }
     );
-    notebooks.push(...notebooksBatch.items);
+    for (const notebook of notebooksBatch.items) {
+      notebooks.set(notebook.id, {
+        title: notebook.title,
+        parent_id: notebook.parent_id
+      })
+    }
     page_num++;
   } while (notebooksBatch.has_more);
 
@@ -28,15 +32,13 @@ async function getNotebooks(): Promise<Array<Notebook>> {
 
 
 function getFilteredNotebooks(
-  notebooks: Array<Notebook>,
+  notebooks: Map<string, Notebook>,
   filteredNotebookNames: Array<string>,
   shouldFilterChildren: boolean,
   isIncludeFilter: boolean
-): Array<Notebook> {
+): Map<string, Notebook> {
   const notebookIdsByName = new Map<string, string>();
-  for (const n of notebooks) { notebookIdsByName.set(n.title, n.id) }
-  const notebooksById = new Map<string, Notebook>();
-  for (const n of notebooks) { notebooksById.set(n.id, n) }
+  for (const [id, n] of notebooks) { notebookIdsByName.set(n.title, id) }
 
   // Get a list of valid notebook names to filter out.
   filteredNotebookNames = filteredNotebookNames.filter((name) =>
@@ -44,7 +46,7 @@ function getFilteredNotebooks(
   );
 
   function shouldIncludeNotebook(parent_id: string): boolean {
-    var parentNotebook: Notebook = notebooksById.get(parent_id);
+    var parentNotebook: Notebook = notebooks.get(parent_id);
     // Filter out the direct parent.
     if (filteredNotebookNames.includes(parentNotebook.title)) {
       return isIncludeFilter;
@@ -56,15 +58,17 @@ function getFilteredNotebooks(
         if (filteredNotebookNames.includes(parentNotebook.title)) {
           return isIncludeFilter;
         }
-        parentNotebook = notebooksById.get(parentNotebook.parent_id);
+        parentNotebook = notebooks.get(parentNotebook.parent_id);
       }
     }
     return !isIncludeFilter;
   }
 
-  const filteredNotebooksArray = notebooks.filter((nb) => !shouldIncludeNotebook(nb.id));
+  for (const [id, n] of notebooks.entries()) {
+    if (!shouldIncludeNotebook(id)) { notebooks.delete(id); }
+  }
 
-  return filteredNotebooksArray
+  return notebooks
 }
 
 
@@ -72,6 +76,7 @@ export interface Note {
   id: string;
   parent_id: string;
   title: string;
+  folder: string;
   links: Set<string>;
   backlinks?: Array<string>;
   linkedToCurrentNote?: boolean;
@@ -99,21 +104,18 @@ export async function getNotes(
   maxDegree: number,
 ): Promise<Map<string, Note>> {
 
-  //console.log('getNotes was called!')
-
   const maxNotes = await joplin.settings.value("MAX_NODES");
   const notebooksToFilter = (await joplin.settings.value('NOTEBOOK_NAMES_TO_FILTER')).split(",");
 
   const shouldFilterChildren = await joplin.settings.value("SETTING_FILTER_CHILD_NOTEBOOKS");
-  const includeBacklinks = await joplin.settings.value("SETTING_INCLUDE_BACKLINKS");
   const isIncludeFilter = (await joplin.settings.value("FILTER_IS_INCLUDE_FILTER")) === "include" ? true : false;
 
   const notebooks = await getNotebooks();
 
   var notes = new Map<string, Note>();
-  var filteredNotebooks = [];
+  var filteredNotebooks = new Map<string, Notebook>();
 
-  if (notebooksToFilter.length >0) {
+  if (notebooksToFilter.length > 0) {
     filteredNotebooks = getFilteredNotebooks(
       notebooks,
       notebooksToFilter,
@@ -122,9 +124,15 @@ export async function getNotes(
     )
   }
   if (maxDegree > 0) {
-    notes = await getLinkedNotes(selectedNotes, maxDegree, includeBacklinks, filteredNotebooks, isIncludeFilter);
+    notes = await getLinkedNotes(
+      selectedNotes,
+      maxDegree,
+      notebooks,
+      filteredNotebooks,
+      isIncludeFilter
+    );
   } else {
-    notes = await getAllNotes(maxNotes);
+    notes = await getAllNotes(maxNotes, notebooks);
   }
   if (notebooksToFilter.length > 0) {
     notes = await filterNotesByNotebookName(
@@ -143,7 +151,7 @@ export async function getNotes(
  */
 export async function filterNotesByNotebookName(
   notes: Map<string, Note>,
-  notebooks: Array<Notebook>,
+  notebooks: Map<string, Notebook>,
   filteredNotebookNames: Array<string>,
   shouldFilterChildren: boolean,
   isIncludeFilter: boolean
@@ -152,9 +160,7 @@ export async function filterNotesByNotebookName(
   if (filteredNotebookNames.length < 1) return notes;
 
   const notebookIdsByName = new Map<string, string>();
-  for (const n of notebooks) { notebookIdsByName.set(n.title, n.id) }
-  const notebooksById = new Map<string, Notebook>();
-  for (const n of notebooks) { notebooksById.set(n.id, n) }
+  for (const [id, n] of notebooks) { notebookIdsByName.set(n.title, id) }
 
   // Get a list of valid notebook names to filter out.
   filteredNotebookNames = filteredNotebookNames.filter((name) =>
@@ -162,7 +168,7 @@ export async function filterNotesByNotebookName(
   );
 
   function shouldIncludeNote(parent_id: string): boolean {
-    var parentNotebook: Notebook = notebooksById.get(parent_id);
+    var parentNotebook: Notebook = notebooks.get(parent_id);
     // Filter out the direct parent.
     if (filteredNotebookNames.includes(parentNotebook.title)) {
       return isIncludeFilter;
@@ -174,7 +180,7 @@ export async function filterNotesByNotebookName(
         if (filteredNotebookNames.includes(parentNotebook.title)) {
           return isIncludeFilter;
         }
-        parentNotebook = notebooksById.get(parentNotebook.parent_id);
+        parentNotebook = notebooks.get(parentNotebook.parent_id);
       }
     }
     return !isIncludeFilter;
@@ -191,7 +197,10 @@ export async function filterNotesByNotebookName(
 }
 
 // Fetches every note.
-async function getAllNotes(maxNotes: number): Promise<Map<string, Note>> {
+async function getAllNotes(
+  maxNotes: number,
+  notebooks: Map<string, Notebook>
+): Promise<Map<string, Note>> {
   var allNotes = new Array<JoplinNote>();
   var page_num = 1;
 
@@ -208,8 +217,13 @@ async function getAllNotes(maxNotes: number): Promise<Map<string, Note>> {
     page_num++;
   } while (notes.has_more && allNotes.length < maxNotes);
 
-  const noteMap = new Map();
-  allNotes.map((note) => noteMap.set(note.id, buildNote(note)));
+  const noteMap = new Map<string, Note>();
+
+  for (const joplinNote of allNotes) {
+    const note = buildNote(joplinNote);
+    note.folder = notebooks.get(note.parent_id).title;
+    noteMap.set(note.id, note);
+  }
   return noteMap;
 }
 
@@ -221,6 +235,7 @@ function buildNote(joplinNote: JoplinNote): Note {
     id: joplinNote.id,
     title: joplinNote.title,
     parent_id: joplinNote.parent_id,
+    folder: undefined,
     links: links,
     backlinks: new Array<string>()
   };
@@ -232,8 +247,8 @@ function buildNote(joplinNote: JoplinNote): Note {
 async function getLinkedNotes(
   source_ids: Array<string>,
   maxDegree: number,
-  includeBacklinks: boolean,
-  filteredNotebooks: Array<Notebook>,
+  notebooks: Map<string, Notebook>,
+  filteredNotebooks: Map<string, Notebook>,
   isIncludeFilter: boolean
 ): Promise<Map<string, Note>> {
   var pending = source_ids;
@@ -241,7 +256,8 @@ async function getLinkedNotes(
   const noteMap = new Map();
   var degree = 0;
 
-  //pending.push(source_ids);
+  const includeBacklinks = await joplin.settings.value("SETTING_INCLUDE_BACKLINKS");
+
   do {
     // Traverse a new batch of pending note ids, storing the note data in
     // the resulting map, and stashing the newly found linked notes for the
@@ -255,6 +271,7 @@ async function getLinkedNotes(
     for (const joplinNote of joplinNotes) {
       // store note data to be returned at the end of the traversal
       const note = buildNote(joplinNote);
+      note.folder = notebooks.get(note.parent_id).title;
       note.distanceToCurrentNote = degree;
       noteMap.set(joplinNote.id, note);
 
@@ -265,7 +282,6 @@ async function getLinkedNotes(
         backlinks = await filterBacklinks(backlinks, filteredNotebooks, isIncludeFilter);
       }
 
-      //console.log(`Backlinks for note "${note.title}" are: ${backlinks}`)
       note.backlinks = backlinks;
 
       const allLinks = [
@@ -294,13 +310,16 @@ async function getLinkedNotes(
 
 async function filterBacklinks(
   backlinks: Array<string>,
-  filteredNotebooks: Array<Notebook>,
+  filteredNotebooks: Map<string, Notebook>,
   isIncludeFilter: boolean
 ): Promise<Array<string>> {
 
   const joplinNotes = await getNoteArray(backlinks);
 
-  const filteredNotebookIds = filteredNotebooks.map((nb) => nb.id);
+  const filteredNotebookIds = [];
+  for (const [id, n] of filteredNotebooks) {
+    filteredNotebookIds.push(id)
+  }
 
   const filteredBacklinks = [];
 

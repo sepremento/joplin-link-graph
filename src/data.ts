@@ -115,7 +115,7 @@ export async function getNotes(
   var notes = new Map<string, Note>();
   var filteredNotebooks = new Map<string, Notebook>();
 
-  if (notebooksToFilter.length > 0) {
+  if (notebooksToFilter[0] !== "" || notebooksToFilter.length > 1) {
     filteredNotebooks = getFilteredNotebooks(
       notebooks,
       notebooksToFilter,
@@ -123,6 +123,7 @@ export async function getNotes(
       isIncludeFilter
     )
   }
+
   if (maxDegree > 0) {
     notes = await getLinkedNotes(
       selectedNotes,
@@ -314,6 +315,7 @@ async function filterBacklinks(
   isIncludeFilter: boolean
 ): Promise<Array<string>> {
 
+
   const joplinNotes = await getNoteArray(backlinks);
 
   const filteredNotebookIds = [];
@@ -321,17 +323,22 @@ async function filterBacklinks(
     filteredNotebookIds.push(id)
   }
 
+
   const filteredBacklinks = [];
 
-  for (const joplinNote of joplinNotes) {
-      const note = buildNote(joplinNote);
 
+  for (const note of joplinNotes) {
       if (isIncludeFilter) {
-        if (filteredNotebookIds.includes(note.parent_id)) { filteredBacklinks.push(note.id) };
+        if (filteredNotebookIds.includes(note.parent_id)) { 
+          filteredBacklinks.push(note.id) 
+        };
       } else {
-        if (!filteredNotebookIds.includes(note.parent_id)) { filteredBacklinks.push(note.id) };
+        if (!filteredNotebookIds.includes(note.parent_id)) {
+          filteredBacklinks.push(note.id)
+        };
       }
   }
+
 
   return filteredBacklinks;
 }

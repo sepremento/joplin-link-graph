@@ -10,6 +10,9 @@ for (const draggable of draggables) {
   draggable.addEventListener('mouseup', (ev) => {
     document.removeEventListener('mousemove', move)
   }) 
+  draggable.addEventListener('mouseout', (ev) => {
+    document.removeEventListener('mousemove', move)
+  }) 
 }
 
 function drag(ev) {

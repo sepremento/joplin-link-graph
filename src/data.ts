@@ -34,9 +34,9 @@ function getFilteredNotebooks(
   isIncludeFilter: boolean
 ): Array<Notebook> {
   const notebookIdsByName = new Map<string, string>();
-  notebooks.forEach((n) => notebookIdsByName.set(n.title, n.id));
+  for (const n of notebooks) { notebookIdsByName.set(n.title, n.id) }
   const notebooksById = new Map<string, Notebook>();
-  notebooks.forEach((n) => notebooksById.set(n.id, n));
+  for (const n of notebooks) { notebooksById.set(n.id, n) }
 
   // Get a list of valid notebook names to filter out.
   filteredNotebookNames = filteredNotebookNames.filter((name) =>
@@ -152,9 +152,9 @@ export async function filterNotesByNotebookName(
   if (filteredNotebookNames.length < 1) return notes;
 
   const notebookIdsByName = new Map<string, string>();
-  notebooks.forEach((n) => notebookIdsByName.set(n.title, n.id));
+  for (const n of notebooks) { notebookIdsByName.set(n.title, n.id) }
   const notebooksById = new Map<string, Notebook>();
-  notebooks.forEach((n) => notebooksById.set(n.id, n));
+  for (const n of notebooks) { notebooksById.set(n.id, n) }
 
   // Get a list of valid notebook names to filter out.
   filteredNotebookNames = filteredNotebookNames.filter((name) =>
@@ -181,11 +181,11 @@ export async function filterNotesByNotebookName(
   }
 
   var filteredNotes = new Map<string, Note>();
-  notes.forEach(function (n, id) {
+  for (let [id, n] of notes) {
     if (shouldIncludeNote(n.parent_id)) {
       filteredNotes.set(id, n);
     }
-  });
+  }
 
   return filteredNotes;
 }
@@ -247,7 +247,9 @@ async function getLinkedNotes(
     // the resulting map, and stashing the newly found linked notes for the
     // next iteration.
     const joplinNotes = await getNoteArray(pending);
-    pending.forEach((pendingNoteId) => visited.add(pendingNoteId));
+    for (const pendingNoteId of pending) {
+      visited.add(pendingNoteId)
+    }
     pending = [];
 
     for (const joplinNote of joplinNotes) {
@@ -272,12 +274,12 @@ async function getLinkedNotes(
       ];
 
       // stash any new links for the next iteration
-      allLinks.forEach((link) => {
+      for (const link of allLinks) {
         // prevent cycles by filtering notes we've already seen.
         if (!visited.has(link)) {
           pending.push(link);
         }
-      });
+      }
     }
 
     degree++;

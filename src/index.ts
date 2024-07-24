@@ -61,7 +61,9 @@ async function fetchData(maxDegree, fetchForNotes?) {
     //console.log(`notes selected:`, selectedNoteIds);
     fetchForNoteIds.push(...selectedNoteIds);
   } else {
-    fetchForNotes.forEach((note) => { fetchForNoteIds.push(note.id); })
+    for (const note of fetchForNotes) {
+      fetchForNoteIds.push(note.id); 
+    }
   }
 
   const notes = await joplinData.getNotes(fetchForNoteIds, maxDegree);
@@ -83,7 +85,7 @@ async function fetchData(maxDegree, fetchForNotes?) {
   };
 
 
-  notes.forEach((note, id) => {
+  for (let [id, note] of notes.entries()) {
     for (let link of note.links) {
       // Slice note link if link directs to an anchor
       var index = link.indexOf("#");
@@ -120,8 +122,8 @@ async function fetchData(maxDegree, fetchForNotes?) {
       totalLinks: note.backlinks.length + note.links.size,
       distanceToCurrentNode: note.distanceToCurrentNote
     });
-  });
 
+  }
   return data;
 }
 
@@ -303,15 +305,15 @@ async function updateUI(eventName: string) {
 
         } else {
           // otherwise just refocus the graph
-          data.edges.forEach((edge) => {
+          for (const edge of data.edges) {
             const shouldHaveFocus =
               data.spanningTree.includes(edge.source) ||
               data.spanningTree.includes(edge.target);
             edge.focused = shouldHaveFocus;
-          });
-          data.nodes.forEach((node) => {
+          }
+          for (const node of data.nodes) {
             node.focused = data.spanningTree.includes(node.id);
-          });
+          }
           dataChanged = true;
         }
       } else {

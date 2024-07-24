@@ -89,9 +89,10 @@ function hoverNode(d, hovered) {
       hoveredNotesIds.add(nodes[i].getAttribute("to"));
     })
     .classed('highlighted', hovered);
-  hoveredNotesIds.forEach((id) => {
+  for (const id of hoveredNotesIds) {
     d3.select(`circle[note_id="${id}"]`).classed('highlighted', hovered);
-  });
+    d3.select(`text[note_id="${id}"]`).classed('highlighted', hovered);
+  };
 
   return showTooltip(d, hovered)
 }
@@ -293,14 +294,42 @@ function chart() {
         .attr("fill", d => color(d.parent_id))
         .attr("font-size", d => { return 10 + 6 * Math.log10(d.totalLinks + 1) + "px"; })
         .text(d => d.title)
-        .attr("x", 20)
-        .attr("y", 5);
+        .call(wrap, 200)
+        .attr("x", 0)
+        .attr("y", 5)
+    }
+  });
+}
+
+function wrap(text, width) {
+  text.each(function () {
+    var text = d3.select(this),
+      words = text.text().split(/\s+/).reverse(),
+      word, line = [], len, prevLen = 0,
+      tspan = text.text(null)
+      .append("tspan")
+    while (word = words.pop()) {
+      line.push(word);
+      tspan.text(line.join(" "));
+      len = tspan.node().getComputedTextLength()
+      if (len > width) {
+        line.pop();
+        tspan.text(line.join(" "));
+        line = [word];
+        tspan = text.append("tspan")
+          .attr("dx", -prevLen)
+          .attr("dy", "1.15em")
+          .text(word);
+      }
+      prevLen = len;
     }
   });
 }
 
 function updateTitle(data) {
-  d3.select(`text.node-label[note_id="${data.noteId}"]`).text(data.newTitle);
+  d3.select(`text.node-label[note_id="${data.noteId}"]`)
+    .text(data.newTitle)
+    .call(wrap, 200);
 }
 
 var graph = chart();

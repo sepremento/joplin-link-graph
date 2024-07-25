@@ -110,8 +110,8 @@ line {
 
 #legend {
   position: absolute;
-  top: 10px;
-  left: 350px;
+  top: 150px;
+  left: 10px;
   background-color: var(--joplin-background-color2);
   border-radius: 5px;
   padding: 6px;

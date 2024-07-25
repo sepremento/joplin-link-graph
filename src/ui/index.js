@@ -333,6 +333,7 @@ function wrap(text, width) {
           .attr("dx", -prevLen)
           .attr("dy", "1.15em")
           .text(word);
+        len = tspan.node().getComputedTextLength()
       }
       prevLen = len;
     }

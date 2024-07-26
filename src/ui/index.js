@@ -96,6 +96,10 @@ function hoverNode(d, hovered) {
   return showTooltip(d, hovered)
 }
 
+function highlightNotebooks(d, hovered) {
+  d3.selectAll(`circle[folder="${d}"]`).classed('hovered', hovered);
+}
+
 async function showTooltip(d, hovered) {
   const tooltip = d3.select('.tooltip');
 
@@ -254,6 +258,7 @@ function chart() {
         .data(nodes, d => d.id)
         .join(enter => enter.append("circle")
           .attr("note_id", d => d.id)
+          .attr("folder", d => d.folder)
           .attr("r", d => { return 10 + 8 * Math.log10(d.totalLinks + 1); })
           .classed("node", true)
           .on("click", (ev, i) => openNote(ev, i)) 
@@ -309,7 +314,9 @@ function chart() {
         .join("div")
         .classed('folder', true)
         .style("color", d => color(d))
-        .text(d => d);
+        .text(d => d)
+        .on('mouseover', (_, i) => highlightNotebooks(i, true))
+        .on('mouseout', (_, i) => highlightNotebooks(i, false))
     }
   });
 }

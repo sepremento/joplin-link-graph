@@ -75,6 +75,7 @@ line {
 
 .hovered {
   filter: brightness(50%);
+  animation: glow 1s ease-in-out infinite;
 }
 
 .inward-link {
@@ -165,3 +166,8 @@ line {
   margin-right: 5px;
 }
 
+@keyframes glow {
+  0% { filter: brightness(100%); }
+  50% { filter: brightness(50%); }
+  100% { filter: brightness(100%); }
+} 

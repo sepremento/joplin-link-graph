@@ -127,7 +127,7 @@ async function fetchData(maxDegree, fetchForNotes?) {
   return data;
 }
 
-async function notifyUI() {
+function notifyUI() {
   // resolves Promise created in processWebviewMessage and sends a message back
   // to the WebView;
 
@@ -138,7 +138,7 @@ async function notifyUI() {
   }
 }
 
-async function recordModelChanges(event) {
+function recordModelChanges(event) {
   modelChanges.push(event);
 }
 

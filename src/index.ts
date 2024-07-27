@@ -52,9 +52,7 @@ joplin.plugins.register({
 
 async function fetchData(maxDegree, fetchForNotes?) {
   // Load settings
-  let selectedNote;
   const fetchForNoteIds: Array<string> = [];
-  const getSetting = joplin.settings.value;
 
   if (typeof(fetchForNotes) === "undefined") {
     const selectedNoteIds = await joplin.workspace.selectedNoteIds();

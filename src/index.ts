@@ -214,15 +214,24 @@ async function processWebviewMessage(message) {
   }
 }
 
+
 async function executeSearchQuery(query): Promise<GraphData> {
+  let page = 1;
   const maxDegree = await joplin.settings.value("MAX_TREE_DEPTH");
-  const searchResult = await joplin.data.get(['search'], {
+  const maxNotes = await joplin.settings.value("MAX_NODES")
+  const foundNotes = new Array();
+
+  do {
+    var notes = await joplin.data.get(['search'], {
       query: query,
       fields: ["id", "parent_id", "title", "body"],
-  });
+      limit: maxNotes < 100 ? maxNotes : 100,
+      page: page
+    });
 
-  const foundNotes = [...searchResult.items];
-
+    foundNotes.push(...notes.items);
+    page++;
+  } while(notes.has_more && foundNotes.length < maxNotes);
 
   return fetchData(maxDegree, foundNotes);
 }

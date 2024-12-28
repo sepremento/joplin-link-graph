@@ -16,7 +16,7 @@ function poll() {
     if (event.name === "initialGraph") { graph.update(event.data); }
     if (event.name === "noteSelectionChange") { graph.update(event.data); }
     if (event.name === "settingsChange") { graph.update(event.data); }
-    if (event.name === "noteChange:title") { updateTitle(event.resp) }
+    if (event.name === "noteChange:title") { graph.update(event.resp) }
     if (event.name === "noteChange:links") { graph.update(event.data) }
     poll();
   });
@@ -77,280 +77,241 @@ function getMaxDistanceSetting() {
 
 // next graph functions
 
-function hoverNode(d, hovered) {
-  const hoveredNotesIds = new Set();
-  const linkSelector = `line[from="${d.id}"],line[to="${d.id}"]`
+async function showTooltip(node) {
+    const tooltip = d3.select('.tooltip');
 
-  d3.select(`circle[note_id="${d.id}"]`).classed('hovered', hovered);
-  d3.selectAll(linkSelector)
-    .each((d, i, nodes) => {
-      hoveredNotesIds.add(nodes[i].getAttribute("from"));
-      hoveredNotesIds.add(nodes[i].getAttribute("to"));
-    })
-    .classed('highlighted', hovered);
-  for (const id of hoveredNotesIds) {
-    d3.select(`circle[note_id="${id}"]`).classed('highlighted', hovered);
-    d3.select(`text[note_id="${id}"]`).classed('highlighted', hovered);
-  };
+    if (node === undefined) {
+        tooltip.classed("hidden", true);
+        return;
+    }
 
-  return showTooltip(d, hovered)
-}
+    const tags = await getNoteTags(node.id);
 
-function highlightNotebooks(d, hovered) {
-  d3.selectAll(`circle[folder="${d}"]`).classed('hovered', hovered);
-}
+    if (tags.length === 0) {
+        tooltip.classed("hidden", true);
+        return;
+    }
 
-async function showTooltip(d, hovered) {
-  const tooltip = d3.select('.tooltip');
-
-  if (!hovered) {
-    tooltip.classed("hidden", true);
-    return;
-  }
-
-  const hoveredBefore = d3.select("circle.hovered").node();
-  const tags = await getNoteTags(d.id);
-  const hoveredAfter = d3.select("circle.hovered").node();
-
-  // If we hovered something different in the meanwhile, don't show tooltip
-  if (hoveredAfter !== hoveredBefore) return;
-  if (tags.length === 0) return;
-
-  const rect = d3
-    .select("circle.hovered")
-    .node()
-    .getBoundingClientRect();
-
-  tooltip.classed("hidden", false);
-
-  tooltip.html(
-    tags.map(({id, title}) => `<div class="node-hover-tag">${title}</div>`)
-    .join(" ")
-  );
-
-  // center tooltip text at bottom of circle
-  // (Note: CSS tranform translate does not work with flex:wrap)
-  const leftPos = window.pageXOffset + rect.x + rect.width / 2 -
-    tooltip.node().getBoundingClientRect().width / 2;
-
-  tooltip
-    .style("left", `${leftPos >= 0 ? leftPos : 0}px`)
-    .style("top", `${window.pageYOffset + rect.y + rect.height}px`);
+    tooltip.classed("hidden", false);
+    tooltip.html(
+        tags.map(({id, title}) => `<div class="node-hover-tag">${title}</div>`)
+            .join(" ")
+    );
+    const leftPos = node.px - tooltip.node().getBoundingClientRect().width / 2;
+    tooltip
+        .style("left", `${leftPos >= 0 ? leftPos : 0}px`)
+        .style("top", `${node.py + 9}px`);
 }
 
 function chart() {
-  const color = d3.scaleOrdinal(d3.schemeTableau10)
+    const color = d3.scaleOrdinal(d3.schemeTableau10);
 
-  // if tooltip div exists then select it otherwise create it
-  const tooltip = (
-    d3.select("#joplin-plugin-content > div.tooltip").node()
-    ? d3.select('div.tooltip')
-    : d3.select('#joplin-plugin-content')
-    .append("div")
-    .classed("tooltip", true)
-  ).classed("hidden", true);
+    // if tooltip div exists then select it otherwise create it
+    const tooltip = (
+        d3.select("#joplin-plugin-content > div.tooltip").node()
+            ? d3.select('div.tooltip')
+            : d3.select('#joplin-plugin-content')
+            .append("div")
+            .classed("tooltip", true)
+    ).classed("hidden", true);
 
-  const svg = d3.select("#note_graph")
-    .append("svg")
+    const canvas = d3.select('#note_graph')
+    .append('canvas')
     .attr("width", width)
     .attr("height", height)
-    .attr("viewBox", [-width / 2, -height / 2, width, height])
-    .append("g");
+    .node();
 
-  svg
-    .append("marker")
-    .attr("id", "arrow")
-    .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 20)
-    .attr("refY", 0)
-    .attr("markerWidth", 15)
-    .attr("markerHeight", 15)
-    .attr("markerUnits", "userSpaceOnUse")
-    .attr("orient", "auto")
-    .style("fill", "#999")
-    .append("svg:path")
-    .attr("d", "M0,-3L10,0L0,3");
+    const context = canvas.getContext('2d');
 
-  const simulation = d3.forceSimulation()
-    .force("charge", d3.forceManyBody().strength(20))
-    .force("center", d3.forceCenter())
-    .force("link", d3.forceLink().id(d => d.id).distance(200))
-    .force("nocollide", d3.forceCollide(48))
-    .on("tick", ticked);
+    let legend = d3.select('#legend')
+        .selectAll("div.folder")
 
-  let link = svg.append("g")
-    .selectAll("line.edge");
+    let oldNodes = new Map();
+    let oldLinks = [];
+    let oldSpanningTree = [];
+    let oldGraphSettings = {};
 
-  let node = svg.append("g")
-    .selectAll("circle.node");
+    return Object.assign(canvas, {
 
-  let nodeLabels = svg.append("g")
-      .attr("fill", "#000")
-    .selectAll("text");
+        update(data) {
+            let nodes, links
+            if (data.updateType === "updateNodeTitle") {
+                const updatedNode = oldNodes.get(data.noteId);
+                if (updatedNode) { updatedNode.title = data.newTitle; }
 
-  let legend = d3.select('#legend')
-    .selectAll("div.folder")
+                nodes = Array.from(oldNodes.values());
+                links = oldLinks;
+                data.graphSettings = oldGraphSettings;
+                data.spanningTree = oldSpanningTree;
+            } else {
+                nodes = data.nodes.map(d => Object.assign(oldNodes.get(d.id) || {}, d));
+                links = data.edges.map(d => Object.assign({}, d));
 
-  function ticked() {
-    node.attr("cx", d => d.x)
-        .attr("cy", d => d.y)
+                oldNodes = new Map(nodes.map(d => [d.id, d]));
+                oldLinks = links;
+                oldGraphSettings = Object.assign(oldGraphSettings, data.graphSettings);
+                oldSpanningTree = data.spanningTree;
+            }
 
-    nodeLabels
-      .attr("x", d => d.x + 20)
-      .attr("y", d => d.y + 5)
+            const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links)
+                .id(d => d.id)
+                .distance(data.graphSettings.linkDistance)
+                .strength(data.graphSettings.linkStrength / 100)
+            )
+            .force("charge", d3.forceManyBody()
+                .strength(data.graphSettings.chargeStrength)
+            )
+            .force("center", d3.forceCenter(width / 2, height / 2)
+                .strength(data.graphSettings.centerStrength / 100)
+            )
+            .force("nocollide", d3.forceCollide(48)
+                .radius(data.graphSettings.collideRadius)
+            )
+            .on("tick", draw);
 
-    link.attr("x1", d => d.source.x)
-        .attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x)
-        .attr("y2", d => d.target.y);
-  }
+            let transform = d3.zoomIdentity;
 
-  const zoom_handler = d3.zoom()
-    .scaleExtent([0.1, 10])
-    .on("zoom", (ev) => zoomActions(svg, ev));
+            let timer;
 
-  zoom_handler(d3.select("svg"));
+            function showInfo(event) {
+                clearTimeout(timer);
+                timer = setTimeout(mouseStopped, 300, event)
+            }
 
-  function dragStart(ev) {
-    if (!event.active) simulation.alphaTarget(0.3).restart();
-    ev.subject.fx = ev.subject.x;
-    ev.subject.fy = ev.subject.y;
-  }
+            function clickOpenNote(event) {
+                const node = findNode(event, nodes);
+                openNote(event, node)
+            }
+            
+            function draw() {
+                context.clearRect(0, 0, width, height);
 
-  function drag(ev) {
-    ev.subject.fx = ev.x;
-    ev.subject.fy = ev.y;
-  }
+                context.save();
+                context.translate(transform.x, transform.y);
+                context.scale(transform.k, transform.k);
+                context.globalAlpha = 0.6;
+                context.strokeStyle = "#999";
+                context.beginPath();        
+                links.forEach(drawLink);
+                context.stroke();
 
-  function dragEnd(ev) {
-    if (!ev.active) simulation.alphaTarget(0);
-    ev.subject.fx = null;
-    ev.subject.fy = null;
-  }
+                context.globalAlpha = 1;
+                nodes.forEach(node => {
+                    context.beginPath();
+                    drawNode(node)
+                    context.stroke();
+                });
+                context.restore();
+            }
 
-  function zoomActions(svg, event) {
-    svg.attr("transform", event.transform);
-  }
+            function drawLink(d) {
+                // Возможный вариант оформления обратных ссылок
+                // const sourceDist = d.sourceDistanceToCurrentNode;
+                // const targetDist = d.targetDistanceToCurrentNode;
+                // const inwardLink = sourceDist > targetDist;
+                // if (inwardLink) { }
+                context.moveTo(d.source.x, d.source.y);
+                context.lineTo(d.target.x, d.target.y);
+            }
 
-  return Object.assign(svg.node(), {
-    update(data) {
+            function drawNode(d) {
+                context.strokeStyle = "#999";
+                if (data.spanningTree.includes(d.id)) {
+                    context.strokeStyle = "#fff";
+                }
+                context.fillStyle = color(d.folder);
+                context.moveTo(d.x + 8, d.y);
+                context.arc(d.x, d.y, 8, 0, 2 * Math.PI);
+                context.fill();
+                wrapNodeText(context, d, 200)
+            }
 
-      const old = new Map(node.data().map(d => [d.id, d]));
-      const nodes = data.nodes.map(d => Object.assign(old.get(d.id) || {}, d));
-      const links = data.edges.map(d => Object.assign({}, d));
+            function findNode(event, nodes) {
+                const [px, py] = d3.pointer(event, canvas);
+                const xi = transform.invertX(px);
+                const yi = transform.invertY(py);
+                const node = d3.least(nodes, ({x, y}) => {
+                    const dist2 = (x - xi) ** 2 + (y - yi) ** 2;
+                    if (dist2 < 400) return dist2;
+                });
+                if (node !== undefined) {
+                    node.px = px;
+                    node.py = py;
+                }
+                return node;
+            }
 
-      const parents = new Array(data.nodes.length);
-      for (let i=0; i<nodes.length; ++i) { parents[i] = nodes[i].folder; }
-      const folders = distinct(parents);
+            function mouseStopped(event) {
+                const node = findNode(event, nodes);
+                showTooltip(node);
+            }
 
-      simulation.nodes(nodes);
-      simulation
-        .force("link")
-        .links(links)
-        .distance(data.graphSettings.linkDistance)
-        .strength(data.graphSettings.linkStrength / 100);
-      simulation.force("charge").strength(data.graphSettings.chargeStrength);
-      simulation.force("center").strength(data.graphSettings.centerStrength /100);
-      simulation.force("nocollide").radius(data.graphSettings.collideRadius);
-      simulation.alpha(0.6).restart();
+            d3.select(canvas)
+                .on('mousemove', showInfo)
+                .on('click', clickOpenNote)
+                .call(d3.drag()
+                    .subject(event => findNode(event, nodes))
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended))
+                .call(d3.zoom()
+                    .scaleExtent([1/10, 8])
+                    .on('zoom', zoomed));
 
-      node = node
-        .data(nodes, d => d.id)
-        .join(enter => enter.append("circle")
-          .attr("note_id", d => d.id)
-          .attr("folder", d => d.folder)
-          .attr("r", d => { return 10 + 8 * Math.log10(d.totalLinks + 1); })
-          .classed("node", true)
-          .on("click", (ev, i) => openNote(ev, i)) 
-          .on("mouseover", (_, i) => hoverNode(i, true))
-          .on("mouseout", (_, i) => hoverNode(i, false))
-          .call(
-            d3
-            .drag()
-            .on("start", dragStart)
-            .on("drag", drag)
-            .on("end", dragEnd)
-          )
-        )
-        .attr("fill", d => color(d.folder))
-        .classed('current-note', (d) => data.spanningTree.includes(d.id))
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
 
-      link = link
-        .data(links, d => `${d.source.id}\t${d.target.id}`)
-        .join("line")
-        .attr("from", d => d.source.id)
-        .attr("to", d => d.target.id)
-        .attr("marker-end", "url(#arrow)")
-        .classed("edge", true)
-        .classed("adjacent-line", (d) => d.focused);
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
 
-      // assign inward-link classes for backlinks
-      if (data.graphSettings.isSelectionBased) {
-        link.attr("class", (d, i, nodes) => {
-          const sourceDist = d.sourceDistanceToCurrentNode;
-          const targetDist = d.targetDistanceToCurrentNode;
-          const inwardLink = sourceDist > targetDist;
-          const classes = [
-            ...nodes[i].classList,
-            ...(inwardLink ? ['inward-link'] : []),
-          ]
-          return classes.join(" ");
-        });
-      }
-      nodeLabels = nodeLabels
-        .data(nodes, d => d.id)
-        .join("text")
-        .attr("class", "node-label")
-        .attr("note_id", d => d.id)
-        .attr("fill", d => color(d.folder))
-        .attr("font-size", d => { return 10 + 6 * Math.log10(d.totalLinks + 1) + "px"; })
-        .text(d => d.title)
-        .call(wrap, 200)
-        .attr("x", 0)
-        .attr("y", 15);
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
 
-      legend = legend
-        .data(folders, d => d)
-        .join("div")
-        .classed('folder', true)
-        .style("color", d => color(d))
-        .text(d => d)
-        .on('mouseover', (_, i) => highlightNotebooks(i, true))
-        .on('mouseout', (_, i) => highlightNotebooks(i, false))
-    }
-  });
+            function zoomed(event) {
+                transform = event.transform;
+                draw();
+            }
+
+            const parents = new Array(nodes.length);
+            for (let i=0; i<nodes.length; ++i) { parents[i] = nodes[i].folder; }
+            const folders = distinct(parents);
+
+            legend = legend
+                .data(folders, d => d)
+                .join("div")
+                .classed('folder', true)
+                .style("color", d => color(d))
+                .text(d => d)
+        }
+    });
 }
 
-function wrap(text, width) {
-  text.each(function () {
-    var text = d3.select(this),
-      words = text.text().split(/\s+/).reverse(),
-      word, line = [], len, prevLen = 0,
-      tspan = text.text(null)
-      .append("tspan")
+function wrapNodeText(context, d, width) {
+    var text = d.title, lineHeight = 16,
+    words = text.split(/\s+/).reverse(),
+    word, line = [], len, N = 0
+
     while (word = words.pop()) {
-      line.push(word);
-      tspan.text(line.join(" "));
-      len = tspan.node().getComputedTextLength()
-      if (len > width) {
-        line.pop();
-        tspan.text(line.join(" "));
-        line = [word];
-        tspan = text.append("tspan")
-          .attr("dx", -prevLen)
-          .attr("dy", "1.15em")
-          .text(word);
-        len = tspan.node().getComputedTextLength()
-      }
-      prevLen = len;
+        line.push(word);
+        len = context.measureText(line.join(" ")).width;
+        if (len > width) {
+            line.pop();
+            context.fillText(line.join(" "), d.x + 9, d.y + N * lineHeight);
+            N += 1;
+            line = [word]
+            len = context.measureText(line.join(" ")).width;
+        }
     }
-  });
-}
-
-function updateTitle(data) {
-  d3.select(`text.node-label[note_id="${data.noteId}"]`)
-    .text(data.newTitle)
-    .call(wrap, 200);
+    context.fillText(line.join(" "), d.x + 9, d.y + N * lineHeight);
 }
 
 function distinct( arr ) {

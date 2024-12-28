@@ -2,7 +2,7 @@
 	"manifest_version": 1,
 	"id": "sepremento.AwesomeGraph",
 	"app_min_version": "1.7",
-	"version": "2.0.0",
+	"version": "3.0.0",
 	"name": "Sepremento's Awesome Graph",
 	"description": "Visualize connections between notes in Joplin.",
 	"author": "Sepremento",

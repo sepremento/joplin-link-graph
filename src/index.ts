@@ -266,6 +266,7 @@ async function updateUI(eventName: string) {
         prevNoteTitle = selectedNote.title;
         eventName += ":title";
         resp = {
+          updateType: "updateNodeTitle",
           noteId: selectedNote.id,
           newTitle: selectedNote.title
         };

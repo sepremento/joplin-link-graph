@@ -123,6 +123,7 @@ function chart() {
 
     const context = canvas.getContext('2d');
 
+    let transform = d3.zoomIdentity;
     let legend = d3.select('#legend')
         .selectAll("div.folder")
 
@@ -170,8 +171,6 @@ function chart() {
             )
             .on("tick", draw);
 
-            let transform = d3.zoomIdentity;
-
             let timer;
 
             function showInfo(event) {
@@ -183,7 +182,7 @@ function chart() {
                 const node = findNode(event, nodes);
                 openNote(event, node)
             }
-            
+
             function draw() {
                 context.clearRect(0, 0, width, height);
 
@@ -235,7 +234,7 @@ function chart() {
                     const dist2 = (x - xi) ** 2 + (y - yi) ** 2;
                     if (dist2 < 400) return dist2;
                 });
-                if (node !== undefined) {
+                if (node) {
                     node.px = px;
                     node.py = py;
                 }
@@ -266,8 +265,9 @@ function chart() {
             }
 
             function dragged(event) {
-                event.subject.fx = event.x;
-                event.subject.fy = event.y;
+                const [px, py] = d3.pointer(event, canvas);
+                event.subject.fx = transform.invertX(px);
+                event.subject.fy = transform.invertY(py);
             }
 
             function dragended(event) {

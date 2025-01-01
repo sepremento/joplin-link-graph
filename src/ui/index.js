@@ -190,31 +190,55 @@ function chart() {
                 context.translate(transform.x, transform.y);
                 context.scale(transform.k, transform.k);
                 context.globalAlpha = 0.6;
-                context.strokeStyle = "#999";
-                context.beginPath();        
                 links.forEach(drawLink);
-                context.stroke();
 
                 context.globalAlpha = 1;
-                nodes.forEach(node => {
-                    context.beginPath();
-                    drawNode(node)
-                    context.stroke();
-                });
+                nodes.forEach(drawNode);
                 context.restore();
             }
 
             function drawLink(d) {
+                context.beginPath();        
                 // Возможный вариант оформления обратных ссылок
                 // const sourceDist = d.sourceDistanceToCurrentNode;
                 // const targetDist = d.targetDistanceToCurrentNode;
                 // const inwardLink = sourceDist > targetDist;
                 // if (inwardLink) { }
-                context.moveTo(d.source.x, d.source.y);
-                context.lineTo(d.target.x, d.target.y);
+                context.strokeStyle = "#999";
+                const x1 = d.source.x,
+                    x2 = d.target.x,
+                    y1 = d.source.y,
+                    y2 = d.target.y;
+                const arrowLen = 10;
+                const offset = 8;
+                const lineLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+                const xa = x2 - (offset / lineLength) * (x2 - x1);
+                const ya = y2 - (offset / lineLength) * (y2 - y1);
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+
+                context.moveTo(x1, y1);
+                context.lineTo(x2, y2);
+
+                // Конечная точка стрелки
+                context.moveTo(xa, ya);
+
+                // Линия стрелки (левое крыло)
+                context.lineTo(
+                    xa - arrowLen * Math.cos(angle - Math.PI / 6),
+                    ya - arrowLen * Math.sin(angle - Math.PI / 6)
+                );
+
+                // Линия стрелки (правое крыло)
+                context.moveTo(xa, ya);
+                context.lineTo(
+                    xa - arrowLen * Math.cos(angle + Math.PI / 6),
+                    ya - arrowLen * Math.sin(angle + Math.PI / 6)
+                );
+                context.stroke();
             }
 
             function drawNode(d) {
+                context.beginPath();
                 context.strokeStyle = "#999";
                 if (data.spanningTree.includes(d.id)) {
                     context.strokeStyle = "#fff";
@@ -224,6 +248,7 @@ function chart() {
                 context.arc(d.x, d.y, 8, 0, 2 * Math.PI);
                 context.fill();
                 wrapNodeText(context, d, 200)
+                context.stroke();
             }
 
             function findNode(event, nodes) {

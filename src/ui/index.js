@@ -127,7 +127,7 @@ function chart() {
 
             function showInfo(event) {
                 clearTimeout(timer);
-                timer = setTimeout(mouseStopped, 300, event)
+                timer = setTimeout(mouseStopped, 150, event)
             }
 
             function clickOpenNote(event) {

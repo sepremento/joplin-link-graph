@@ -72,7 +72,7 @@ async function fetchData(maxDegree, fetchForNotes?) {
     collideRadius: await joplin.settings.value('COLLIDE_RADIUS'),
     linkDistance: await joplin.settings.value('LINK_DISTANCE'),
     linkStrength: await joplin.settings.value('LINK_STRENGTH'),
-    alpha: await joplin.settings.value('ALPHA')
+    alpha: await joplin.settings.value('ALPHA'),
   }
 
   const data: GraphData = {
@@ -98,7 +98,6 @@ async function fetchData(maxDegree, fetchForNotes?) {
         target: link,
         sourceDistanceToCurrentNode: notes.get(id).distanceToCurrentNote,
         targetDistanceToCurrentNode: notes.get(link).distanceToCurrentNote,
-        // focused: fetchForNoteIds.includes(id) || fetchForNoteIds.includes(link),
       });
 
       // Mark nodes that are adjacent to the currently selected note.
@@ -117,7 +116,6 @@ async function fetchData(maxDegree, fetchForNotes?) {
       title: note.title,
       parent_id: note.parent_id,
       folder: note.folder,
-      // focused: note.linkedToCurrentNote,
       totalLinks: note.backlinks.length + note.links.size,
       distanceToCurrentNode: note.distanceToCurrentNote
     });
@@ -206,13 +204,6 @@ async function drawPanel(panel) {
   );
 }
 
-        // <div id="user-input-container">
-        //   <div class="draggable-field"></div>
-        //   <button id="redraw-btn">Redraw Graph</button>
-        // </div>
-        // <div id="legend">
-        //   <div class="draggable-field"></div>
-        // </div>
 async function registerShowHideCommand(graphPanel) {
   // Register Show/Hide Graph Command and also create a toolbar button for this
   // command and a menu item.
@@ -368,19 +359,6 @@ async function updateUI(eventName: string) {
         // but if selected note was not in the previous data then refetch
         if (!data.spanningTree.every(n => graphNoteIds.includes(n))) {
           data = await fetchData(maxDegree, data.spanningTree);
-          dataChanged = true;
-
-        } else {
-          // otherwise just refocus the graph
-          // for (const edge of data.edges) {
-          //   const shouldHaveFocus =
-          //     data.spanningTree.includes(edge.source) ||
-          //     data.spanningTree.includes(edge.target);
-          //   edge.focused = shouldHaveFocus;
-          // }
-          // for (const node of data.nodes) {
-          //   node.focused = data.spanningTree.includes(node.id);
-          // }
           dataChanged = true;
         }
       } else {

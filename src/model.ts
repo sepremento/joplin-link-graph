@@ -3,7 +3,7 @@ export interface Edge {
   target: string;
   sourceDistanceToCurrentNode?: number;
   targetDistanceToCurrentNode?: number;
-  focused: boolean;
+  // focused: boolean;
 }
 
 export interface Node {
@@ -11,7 +11,7 @@ export interface Node {
   title: string;
   parent_id: string;
   folder: string;
-  focused: boolean;
+  // focused: boolean;
   totalLinks: number;
   distanceToCurrentNode?: number;
 }

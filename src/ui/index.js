@@ -154,6 +154,9 @@ function chart() {
                 oldSpanningTree = data.spanningTree;
             }
 
+            console.log(links);
+            console.log(nodes);
+
             const simulation = d3.forceSimulation(nodes)
             .force("link", d3.forceLink(links)
                 .id(d => d.id)
@@ -189,7 +192,6 @@ function chart() {
                 context.save();
                 context.translate(transform.x, transform.y);
                 context.scale(transform.k, transform.k);
-                context.globalAlpha = 0.6;
                 links.forEach(drawLink);
 
                 context.globalAlpha = 1;
@@ -204,7 +206,14 @@ function chart() {
                 // const targetDist = d.targetDistanceToCurrentNode;
                 // const inwardLink = sourceDist > targetDist;
                 // if (inwardLink) { }
+                context.globalAlpha = 0.1;
                 context.strokeStyle = "#999";
+
+                if (d.focused) {
+                    context.globalAlpha = 1;
+                    context.strokeStyle = "#959";
+                }
+
                 const x1 = d.source.x,
                     x2 = d.target.x,
                     y1 = d.source.y,
@@ -238,16 +247,24 @@ function chart() {
             }
 
             function drawNode(d) {
+                const r = Math.max(10 - 3 * d.distanceToCurrentNode, 4);
+                const maxLabelWidth = 150;
                 context.beginPath();
                 context.strokeStyle = "#999";
+                context.fillStyle = "#999";
+                context.lineWidth = 1.0;
                 if (data.spanningTree.includes(d.id)) {
-                    context.strokeStyle = "#fff";
+                    context.fillStyle = "#595";
                 }
-                context.fillStyle = color(d.folder);
-                context.moveTo(d.x + 8, d.y);
-                context.arc(d.x, d.y, 8, 0, 2 * Math.PI);
+
+                if (d.focused) {
+                    context.strokeStyle = "#599";
+                    context.fillStyle = "#599";
+                }
+                context.moveTo(d.x + r, d.y);
+                context.arc(d.x, d.y, r, 0, 2 * Math.PI);
                 context.fill();
-                wrapNodeText(context, d, 200)
+                wrapNodeText(context, d, r, maxLabelWidth);
                 context.stroke();
             }
 
@@ -266,8 +283,31 @@ function chart() {
                 return node;
             }
 
+            function highlightSelectedNodeAndLinks(node) {
+                if (!node) { return; }
+                const adjacentNodes = [];
+                for (let link of links) {
+                    if (link.source.id === node.id) {
+                        link.focused = true;
+                        adjacentNodes.push(link.target.id);
+                    }
+                    link.focused = false;
+                }
+                console.log("Highlighted links", links);
+
+                for (let n of nodes) {
+                    if (adjacentNodes.includes(n.id)) {
+                        n.focused = true;
+                    }
+                    n.focused = false;
+                }
+
+                console.log("Highlighted nodes", nodes);
+            }
+
             function mouseStopped(event) {
                 const node = findNode(event, nodes);
+                highlightSelectedNodeAndLinks(node);
                 showTooltip(node);
             }
 
@@ -320,23 +360,24 @@ function chart() {
     });
 }
 
-function wrapNodeText(context, d, width) {
+function wrapNodeText(context, d, r, width) {
     var text = d.title, lineHeight = 16,
     words = text.split(/\s+/).reverse(),
-    word, line = [], len, N = 0
+    word, line = [], len, N = 0,
+    offset = (2 * r) + 3;
 
     while (word = words.pop()) {
         line.push(word);
         len = context.measureText(line.join(" ")).width;
         if (len > width) {
             line.pop();
-            context.fillText(line.join(" "), d.x + 9, d.y + N * lineHeight);
+            context.fillText(line.join(" "), d.x - width / 2, d.y + offset + N * lineHeight);
             N += 1;
             line = [word]
             len = context.measureText(line.join(" ")).width;
         }
     }
-    context.fillText(line.join(" "), d.x + 9, d.y + N * lineHeight);
+    context.fillText(line.join(" "), d.x - len / 2 , d.y + offset + N * lineHeight);
 }
 
 function distinct( arr ) {

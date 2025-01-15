@@ -97,7 +97,7 @@ async function fetchData(maxDegree, fetchForNotes?) {
         target: link,
         sourceDistanceToCurrentNode: notes.get(id).distanceToCurrentNote,
         targetDistanceToCurrentNode: notes.get(link).distanceToCurrentNote,
-        focused: fetchForNoteIds.includes(id) || fetchForNoteIds.includes(link),
+        // focused: fetchForNoteIds.includes(id) || fetchForNoteIds.includes(link),
       });
 
       // Mark nodes that are adjacent to the currently selected note.
@@ -116,7 +116,7 @@ async function fetchData(maxDegree, fetchForNotes?) {
       title: note.title,
       parent_id: note.parent_id,
       folder: note.folder,
-      focused: note.linkedToCurrentNote,
+      // focused: note.linkedToCurrentNote,
       totalLinks: note.backlinks.length + note.links.size,
       distanceToCurrentNode: note.distanceToCurrentNote
     });
@@ -311,15 +311,15 @@ async function updateUI(eventName: string) {
 
         } else {
           // otherwise just refocus the graph
-          for (const edge of data.edges) {
-            const shouldHaveFocus =
-              data.spanningTree.includes(edge.source) ||
-              data.spanningTree.includes(edge.target);
-            edge.focused = shouldHaveFocus;
-          }
-          for (const node of data.nodes) {
-            node.focused = data.spanningTree.includes(node.id);
-          }
+          // for (const edge of data.edges) {
+          //   const shouldHaveFocus =
+          //     data.spanningTree.includes(edge.source) ||
+          //     data.spanningTree.includes(edge.target);
+          //   edge.focused = shouldHaveFocus;
+          // }
+          // for (const node of data.nodes) {
+          //   node.focused = data.spanningTree.includes(node.id);
+          // }
           dataChanged = true;
         }
       } else {

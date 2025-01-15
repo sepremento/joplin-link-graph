@@ -125,5 +125,15 @@ export async function registerSettings() {
       description:
         "",
     },
+    ALPHA: {
+      advanced: true,
+      value: 30,
+      type: SettingItemType.Int,
+      section: sectionName,
+      public: true,
+      label: "Alpha Target",
+      description:
+        "",
+    },
   });
 }

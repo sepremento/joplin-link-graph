@@ -71,7 +71,8 @@ async function fetchData(maxDegree, fetchForNotes?) {
     centerStrength: await joplin.settings.value('CENTER_STRENGTH'),
     collideRadius: await joplin.settings.value('COLLIDE_RADIUS'),
     linkDistance: await joplin.settings.value('LINK_DISTANCE'),
-    linkStrength: await joplin.settings.value('LINK_STRENGTH')
+    linkStrength: await joplin.settings.value('LINK_STRENGTH'),
+    alpha: await joplin.settings.value('ALPHA')
   }
 
   const data: GraphData = {
@@ -165,8 +166,8 @@ async function drawPanel(panel) {
             <details>
                 <summary>Graph Parameters</summary>
                 <div class="force-block">
-                    <label for="nocollide-strength-input">No Collide Strength</label>
-                    <input class="settings" id="nocollide-strength-input" type="number"></input>
+                    <label for="nocollide-radius-input">No Collide Radius</label>
+                    <input class="settings" id="nocollide-radius-input" type="number"></input>
                 </div>
                 <div class="force-block">
                     <label for="link-distance-input">Link Distance</label>
@@ -185,7 +186,7 @@ async function drawPanel(panel) {
                     <input class="settings" id="center-strength-input" type="number"></input>
                 </div>
                 <div class="control-block">
-                    <label for="temperature-slider">Start alpha</label>
+                    <label for="temperature-slider">Alpha Target</label>
                     <input class="settings slider" id="temperature-slider" type="range" class="slider" min="0" max="100" value="30"></input>
                 </div>
                 <div class="control-block">
@@ -268,7 +269,8 @@ async function processWebviewMessage(message) {
                 collideRadius: await joplin.settings.value('COLLIDE_RADIUS'),
                 linkDistance: await joplin.settings.value('LINK_DISTANCE'),
                 linkStrength: await joplin.settings.value('LINK_STRENGTH'),
-                maxDepth: await joplin.settings.value('MAX_TREE_DEPTH')
+                maxDepth: await joplin.settings.value('MAX_TREE_DEPTH'),
+                alpha: await joplin.settings.value('ALPHA')
             }
     }
 }

@@ -71,10 +71,11 @@ export function init(initialValues, handleSettingChange, handleRedraw) {
 
     const chargeStrengthInput = document.getElementById("charge-strength-input");
     const centerStrenthInput = document.getElementById("center-strength-input");
-    const collideRadiusInput = document.getElementById("nocollide-strength-input");
+    const collideRadiusInput = document.getElementById("nocollide-radius-input");
     const linkStrenthInput = document.getElementById("link-strength-input");
     const linkDistanceInput = document.getElementById("link-distance-input");
     const maxDistInput = document.getElementById("distance-slider");
+    const temperatureInput = document.getElementById("temperature-slider");
 
     const distOutput = document.getElementById("distance-output");
     const redrawBtn = document.getElementById("redraw-btn");
@@ -84,7 +85,8 @@ export function init(initialValues, handleSettingChange, handleRedraw) {
     collideRadiusInput.value = initialValues.collideRadius;
     linkDistanceInput.value = initialValues.linkDistance;
     linkStrenthInput.value = initialValues.linkStrength;
-
+    temperatureInput.value = initialValues.alpha;
+    maxDistInput.value = initialValues.maxDepth;
 
     chargeStrengthInput.addEventListener("change", () => {
         handleSettingChange("CHARGE_STRENGTH", chargeStrengthInput.valueAsNumber);
@@ -103,6 +105,9 @@ export function init(initialValues, handleSettingChange, handleRedraw) {
     });
     maxDistInput.addEventListener("change", () => {
         handleSettingChange("MAX_TREE_DEPTH", maxDistInput.valueAsNumber);
+    });
+    temperatureInput.addEventListener("change", () => {
+        handleSettingChange("ALPHA", temperatureInput.valueAsNumber);
     });
     maxDistInput.addEventListener("input", () => {
         distOutput.value = maxDistInput.value;

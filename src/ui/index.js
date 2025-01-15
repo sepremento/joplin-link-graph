@@ -120,6 +120,7 @@ function chart() {
             .force("nocollide", d3.forceCollide(48)
                 .radius(data.graphSettings.collideRadius)
             )
+            .alpha(data.graphSettings.alpha / 100)
             .on("tick", draw);
 
             let timer;
@@ -214,7 +215,9 @@ function chart() {
                 context.moveTo(d.x + r, d.y);
                 context.arc(d.x, d.y, r, 0, 2 * Math.PI);
                 context.fill();
-                wrapNodeText(context, d, r, maxLabelWidth);
+                if (transform.k >= 0.7) {
+                    wrapNodeText(context, d, r, maxLabelWidth);
+                }
                 context.stroke();
             }
 

@@ -30,4 +30,5 @@ export interface GraphSettings {
   collideRadius: number;
   linkDistance: number;
   linkStrength: number;
+  alpha: number;
 }

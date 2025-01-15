@@ -146,12 +146,57 @@ async function drawPanel(panel) {
     `
     <div class="graph-content">
       <div id="container">
-        <div id="user-input-container">
-          <div class="draggable-field"></div>
-          <button id="redraw-btn">Redraw Graph</button>
-        </div>
-        <div id="legend">
-          <div class="draggable-field"></div>
+        <div id="graph-handle">
+            <div class="drag-handle"></div>
+            <input id="redraw-btn" type="button" value="Redraw Graph"></input>
+            <div id="cb1" class="control-block">
+                <label for="query-input">Query</label>
+                <input id="query-input" type="string"></input>
+            </div>
+            <div class="control-block">
+                <label for="distance-slider">Max. distance</label>
+                <input class="settings slider" id="distance-slider" class="slider" type="range" min="0" max="5" value="2"> </input>
+                <output id="distance-output">2</output>
+            </div>
+            <div class="buttons-block">
+                <input id="submit-btn" type="button" value="Submit"></input>
+                <input id="stop-btn" type="button" value="Stop Sim"></input>
+            </div>
+            <details>
+                <summary>Graph Parameters</summary>
+                <div class="force-block">
+                    <label for="nocollide-strength-input">No Collide Strength</label>
+                    <input class="settings" id="nocollide-strength-input" type="number"></input>
+                </div>
+                <div class="force-block">
+                    <label for="link-distance-input">Link Distance</label>
+                    <input class="settings" id="link-distance-input" type="number"></input>
+                </div>
+                <div class="force-block">
+                    <label for="link-strength-input">Link Strength</label>
+                    <input class="settings" id="link-strength-input" type="number"></input>
+                </div>
+                <div class="force-block">
+                    <label for="charge-strength-input">Charge Strength</label>
+                    <input class="settings" id="charge-strength-input" type="number"></input>
+                </div>
+                <div class="force-block">
+                    <label for="center-strength-input">Center Strength</label>
+                    <input class="settings" id="center-strength-input" type="number"></input>
+                </div>
+                <div class="control-block">
+                    <label for="temperature-slider">Start alpha</label>
+                    <input class="settings slider" id="temperature-slider" type="range" class="slider" min="0" max="100" value="30"></input>
+                </div>
+                <div class="control-block">
+                    <label for="center-strength-input">Backlinks</label>
+                    <select id="center-strength-input" type="number">
+                        <option value="backlinks-off">Backlinks Off</option>
+                        <option value="backlinks-on">Backlinks On</option>
+                        <option value="directed-graph">Directed Graph</option>
+                    </select>
+                </div>
+            </details>
         </div>
         <div id="note_graph"/></div>
       </div>
@@ -160,6 +205,13 @@ async function drawPanel(panel) {
   );
 }
 
+        // <div id="user-input-container">
+        //   <div class="draggable-field"></div>
+        //   <button id="redraw-btn">Redraw Graph</button>
+        // </div>
+        // <div id="legend">
+        //   <div class="draggable-field"></div>
+        // </div>
 async function registerShowHideCommand(graphPanel) {
   // Register Show/Hide Graph Command and also create a toolbar button for this
   // command and a menu item.
@@ -191,27 +243,34 @@ async function registerShowHideCommand(graphPanel) {
 }
 
 async function processWebviewMessage(message) {
-  switch (message.name) {
-    case "poll":
-      let p = new Promise((resolve) => { pollCb = resolve; });
-      notifyUI();
-      return p;
-    case "update":
-      return { name: "update", data: data };
-    case "search-query":
-      data = await executeSearchQuery(message.query);
-      return { name: "update", data: data };
-    break;
-    case "navigateTo":
-      joplin.commands.execute("openNote", message.id);
-    break;
-    case "get_note_tags":
-      return joplinData.getNoteTags(message.id);
-    case "set_setting":
-      return joplin.settings.setValue(message.key, message.value);
-    case "get_setting":
-      return joplin.settings.value(message.key);
-  }
+    switch (message.name) {
+        case "poll":
+            let p = new Promise((resolve) => { pollCb = resolve; });
+            notifyUI();
+            return p;
+        case "update":
+            return { name: "update", data: data };
+        case "search-query":
+            data = await executeSearchQuery(message.query);
+            return { name: "update", data: data };
+            break;
+        case "navigateTo":
+            await joplin.commands.execute("openNote", message.id);
+            break;
+        case "get_note_tags":
+            return await joplinData.getNoteTags(message.id);
+        case "set_setting":
+            return await joplin.settings.setValue(message.key, message.value);
+        case "get_settings":
+            return {
+                chargeStrength: await joplin.settings.value('CHARGE_STRENGTH'),
+                centerStrength: await joplin.settings.value('CENTER_STRENGTH'),
+                collideRadius: await joplin.settings.value('COLLIDE_RADIUS'),
+                linkDistance: await joplin.settings.value('LINK_DISTANCE'),
+                linkStrength: await joplin.settings.value('LINK_STRENGTH'),
+                maxDepth: await joplin.settings.value('MAX_TREE_DEPTH')
+            }
+    }
 }
 
 

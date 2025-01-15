@@ -1,10 +1,8 @@
 import * as d3 from "d3";
 import * as userInput from "./user-input.js"
 
-
 var width = window.innerWidth;
 var height = window.innerHeight;
-var margin = { top: 10, right: 10, bottom: 10, left: 10 };
 
 
 // first functions are for communication with the plugin
@@ -33,6 +31,7 @@ function update() {
 }
 
 function processUserQuery(query) {
+  if (!query) { return; }
   webviewApi.postMessage({
     name: "search-query",
     query: query 
@@ -40,13 +39,6 @@ function processUserQuery(query) {
     if (event.data) {
       graph.update(event.data);
     }
-  });
-}
-
-function getNoteTags(noteId) {
-  return webviewApi.postMessage({
-    name: "get_note_tags",
-    id: noteId
   });
 }
 
@@ -59,61 +51,22 @@ function openNote(event, i) {
   }
 }
 
-function setMaxDistanceSetting(newVal) {
+function setSetting(settingName, newVal) {
   // will automically trigger ui update of graph
   return webviewApi.postMessage({
     name: "set_setting",
-    key: "MAX_TREE_DEPTH",
+    key: settingName,
     value: newVal,
   });
 }
 
-function getMaxDistanceSetting() {
-  return webviewApi.postMessage({
-    name: "get_setting",
-    key: "MAX_TREE_DEPTH"
-  })
+function getSettings() {
+  return webviewApi.postMessage({ name: "get_settings", })
 }
 
 // next graph functions
 
-async function showTooltip(node) {
-    const tooltip = d3.select('.tooltip');
-
-    if (node === undefined) {
-        tooltip.classed("hidden", true);
-        return;
-    }
-
-    const tags = await getNoteTags(node.id);
-
-    if (tags.length === 0) {
-        tooltip.classed("hidden", true);
-        return;
-    }
-
-    tooltip.classed("hidden", false);
-    tooltip.html(
-        tags.map(({id, title}) => `<div class="node-hover-tag">${title}</div>`)
-            .join(" ")
-    );
-    const leftPos = node.px - tooltip.node().getBoundingClientRect().width / 2;
-    tooltip
-        .style("left", `${leftPos >= 0 ? leftPos : 0}px`)
-        .style("top", `${node.py + 9}px`);
-}
-
 function chart() {
-    const color = d3.scaleOrdinal(d3.schemeTableau10);
-
-    // if tooltip div exists then select it otherwise create it
-    const tooltip = (
-        d3.select("#joplin-plugin-content > div.tooltip").node()
-            ? d3.select('div.tooltip')
-            : d3.select('#joplin-plugin-content')
-            .append("div")
-            .classed("tooltip", true)
-    ).classed("hidden", true);
 
     const canvas = d3.select('#note_graph')
     .append('canvas')
@@ -124,8 +77,6 @@ function chart() {
     const context = canvas.getContext('2d');
 
     let transform = d3.zoomIdentity;
-    let legend = d3.select('#legend')
-        .selectAll("div.folder")
 
     let oldNodes = new Map();
     let oldLinks = [];
@@ -153,9 +104,6 @@ function chart() {
                 oldGraphSettings = Object.assign(oldGraphSettings, data.graphSettings);
                 oldSpanningTree = data.spanningTree;
             }
-
-            console.log(links);
-            console.log(nodes);
 
             const simulation = d3.forceSimulation(nodes)
             .force("link", d3.forceLink(links)
@@ -211,7 +159,6 @@ function chart() {
 
                 if (d.focused) {
                     context.globalAlpha = 1;
-                    context.strokeStyle = "#959";
                 }
 
                 const x1 = d.source.x,
@@ -219,7 +166,9 @@ function chart() {
                     y1 = d.source.y,
                     y2 = d.target.y;
                 const arrowLen = 10;
-                const offset = 8;
+                // const offset = 8;
+                const depth = d.target.distanceToCurrentNode ? d.target.distanceToCurrentNode : 0;
+                const offset = Math.max(10 - 3 * depth, 4);
                 const lineLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
                 const xa = x2 - (offset / lineLength) * (x2 - x1);
                 const ya = y2 - (offset / lineLength) * (y2 - y1);
@@ -247,7 +196,8 @@ function chart() {
             }
 
             function drawNode(d) {
-                const r = Math.max(10 - 3 * d.distanceToCurrentNode, 4);
+                const depth = d.distanceToCurrentNode ? d.distanceToCurrentNode : 0;
+                const r = Math.max(10 - 3 * depth, 4);
                 const maxLabelWidth = 150;
                 context.beginPath();
                 context.strokeStyle = "#999";
@@ -258,8 +208,8 @@ function chart() {
                 }
 
                 if (d.focused) {
-                    context.strokeStyle = "#599";
-                    context.fillStyle = "#599";
+                    context.strokeStyle = "#595";
+                    context.fillStyle = "#595";
                 }
                 context.moveTo(d.x + r, d.y);
                 context.arc(d.x, d.y, r, 0, 2 * Math.PI);
@@ -284,31 +234,30 @@ function chart() {
             }
 
             function highlightSelectedNodeAndLinks(node) {
-                if (!node) { return; }
                 const adjacentNodes = [];
                 for (let link of links) {
-                    if (link.source.id === node.id) {
+                    link.focused = false;
+                    if (node && (link.source.id === node.id || link.target.id === node.id)) {
                         link.focused = true;
                         adjacentNodes.push(link.target.id);
                     }
-                    link.focused = false;
                 }
-                console.log("Highlighted links", links);
 
                 for (let n of nodes) {
-                    if (adjacentNodes.includes(n.id)) {
+                    n.focused = false;
+                    if (node && adjacentNodes.includes(n.id)) {
                         n.focused = true;
                     }
-                    n.focused = false;
                 }
 
-                console.log("Highlighted nodes", nodes);
+                simulation.nodes(nodes);
+                simulation.force("link").links(links);
+                draw();
             }
 
             function mouseStopped(event) {
                 const node = findNode(event, nodes);
                 highlightSelectedNodeAndLinks(node);
-                showTooltip(node);
             }
 
             d3.select(canvas)
@@ -348,14 +297,6 @@ function chart() {
 
             const parents = new Array(nodes.length);
             for (let i=0; i<nodes.length; ++i) { parents[i] = nodes[i].folder; }
-            const folders = distinct(parents);
-
-            legend = legend
-                .data(folders, d => d)
-                .join("div")
-                .classed('folder', true)
-                .style("color", d => color(d))
-                .text(d => d)
         }
     });
 }
@@ -364,7 +305,7 @@ function wrapNodeText(context, d, r, width) {
     var text = d.title, lineHeight = 16,
     words = text.split(/\s+/).reverse(),
     word, line = [], len, N = 0,
-    offset = (2 * r) + 3;
+    offset = (2 * r) + 4;
 
     while (word = words.pop()) {
         line.push(word);
@@ -380,21 +321,13 @@ function wrapNodeText(context, d, r, width) {
     context.fillText(line.join(" "), d.x - len / 2 , d.y + offset + N * lineHeight);
 }
 
-function distinct( arr ) {
-  var j = {};
-  for (let v of arr) { j[v] = v; };
-  const result = new Array(Object.keys(j).length);
-  for (let i=0; i < result.length; ++i) { result[i] = Object.keys(j)[i]; }
-  return result
-} 
-
 var graph = chart();
 
 userInput.initQueryInput(processUserQuery);
 
-getMaxDistanceSetting().then((v) => {
+getSettings().then((initialValues) => {
   // todo: shorten up, when top-level await available
-  userInput.init(v, setMaxDistanceSetting, update);
+  userInput.init(initialValues, setSetting, update);
   update();
 });
 

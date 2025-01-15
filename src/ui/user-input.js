@@ -1,7 +1,5 @@
-const parent = document.getElementById('container');
-const container = document.getElementById("user-input-container");
-const legend = document.getElementById('legend');
-const draggables = document.querySelectorAll('div.draggable-field');
+const graphContainer = document.getElementById('container');
+const draggables = document.querySelectorAll('div.drag-handle');
 
 let offsetX, offsetY;
 
@@ -16,7 +14,7 @@ for (const draggable of draggables) {
 }
 
 function drag(ev) {
-  if (!ev.currentTarget.classList.contains('draggable-field')) { return; };
+  if (!ev.currentTarget.classList.contains('drag-handle')) { return; };
 
   offsetX = ev.clientX - ev.currentTarget.parentElement.offsetLeft;
   offsetY = ev.clientY - ev.currentTarget.parentElement.offsetTop;
@@ -24,18 +22,18 @@ function drag(ev) {
 }
 
 function move(ev) {
-  if (!ev.target.classList.contains('draggable-field')) { return; };
+  if (!ev.target.classList.contains('drag-handle')) { return; };
 
   var newX = ev.clientX - offsetX;
   var newY = ev.clientY - offsetY;
 
   if (newX < 0) { newX = 0; }
-  if (newX + ev.target.parentNode.offsetWidth > parent.offsetWidth) {
-    newX = parent.offsetWidth - ev.target.parentNode.offsetWidth;
+  if (newX + ev.target.parentNode.offsetWidth > graphContainer.offsetWidth) {
+    newX = graphContainer.offsetWidth - ev.target.parentNode.offsetWidth;
   }
   if (newY < 0) { newY = 0; }
-  if (newY + ev.target.parentNode.offsetHeight > parent.offsetHeight) {
-    newY = parent.offsetHeight - ev.target.parentNode.offsetHeight;
+  if (newY + ev.target.parentNode.offsetHeight > graphContainer.offsetHeight) {
+    newY = graphContainer.offsetHeight - ev.target.parentNode.offsetHeight;
   }
 
   ev.target.parentNode.style.left = `${newX}px`;
@@ -56,51 +54,58 @@ function chromeRangeInputFix() {
     });
 }
 
-function initDistanceRangeInput(initialValue, handleChange) {
-  const html = `
-  <div>
-    <label for="maxDistance">Max. distance</label>
-    <input 
-      name="maxDistance"
-      type="range"
-      min="0"
-      value="${initialValue}"
-      max="5"
-      step="1"
-    >
-    <output>${initialValue}</output>
-  </div>
-  `;
-
-  container.insertAdjacentHTML("beforeend", html);
-  const input = container.querySelector("input[name='maxDistance']")
-  input.addEventListener("input", function () {
-    const output = this.nextElementSibling;
-    output.value = this.value;
-  });
-  input.addEventListener("change", function () {
-    handleChange(this.valueAsNumber);
-  });
-}
-
 export function initQueryInput(handle) {
-  const html = `
-  <div>
-  <label for="userQuery">Query</label>
-  <input name="userQuery" type="text" value="">
-  <input type="button" id="submit-query-btn" value="Submit">
-  </div>
-  `
-  container.insertAdjacentHTML("beforeend", html);
-  const userQuery = container.querySelector("input[name='userQuery']");
-  const submitBtn = container.querySelector("#submit-query-btn");
-  submitBtn.addEventListener("click", () => { handle(userQuery.value); })
+    const userQuery = document.getElementById("query-input");
+    const submitBtn = document.getElementById("submit-btn");
+    submitBtn.addEventListener("click", () => { handle(userQuery.value); })
+    userQuery.addEventListener("keypress", (ev) => {
+        if (ev.key === 'Enter') {
+            ev.preventDefault();
+            submitBtn.click();
+        }
+    })
 }
 
-export function init(initDistanceValue, handleDistanceChange, handleRedraw) {
-  chromeRangeInputFix();
-  initDistanceRangeInput(initDistanceValue, handleDistanceChange);
-  document
-    .getElementById("redraw-btn")
-    .addEventListener("click", handleRedraw);
+export function init(initialValues, handleSettingChange, handleRedraw) {
+    chromeRangeInputFix();
+
+    const chargeStrengthInput = document.getElementById("charge-strength-input");
+    const centerStrenthInput = document.getElementById("center-strength-input");
+    const collideRadiusInput = document.getElementById("nocollide-strength-input");
+    const linkStrenthInput = document.getElementById("link-strength-input");
+    const linkDistanceInput = document.getElementById("link-distance-input");
+    const maxDistInput = document.getElementById("distance-slider");
+
+    const distOutput = document.getElementById("distance-output");
+    const redrawBtn = document.getElementById("redraw-btn");
+
+    chargeStrengthInput.value = initialValues.chargeStrength;
+    centerStrenthInput.value = initialValues.centerStrength;
+    collideRadiusInput.value = initialValues.collideRadius;
+    linkDistanceInput.value = initialValues.linkDistance;
+    linkStrenthInput.value = initialValues.linkStrength;
+
+
+    chargeStrengthInput.addEventListener("change", () => {
+        handleSettingChange("CHARGE_STRENGTH", chargeStrengthInput.valueAsNumber);
+    });
+    centerStrenthInput.addEventListener("change", () => {
+        handleSettingChange("CENTER_STRENGTH", centerStrenthInput.valueAsNumber);
+    });
+    collideRadiusInput.addEventListener("change", () => {
+        handleSettingChange("COLLIDE_RADIUS", collideRadiusInput.valueAsNumber);
+    });
+    linkStrenthInput.addEventListener("change", () => {
+        handleSettingChange("LINK_STRENGTH", linkStrenthInput.valueAsNumber);
+    });
+    linkDistanceInput.addEventListener("change", () => {
+        handleSettingChange("LINK_DISTANCE", linkDistanceInput.valueAsNumber);
+    });
+    maxDistInput.addEventListener("change", () => {
+        handleSettingChange("MAX_TREE_DEPTH", maxDistInput.valueAsNumber);
+    });
+    maxDistInput.addEventListener("input", () => {
+        distOutput.value = maxDistInput.value;
+    });
+    redrawBtn.addEventListener("click", handleRedraw);
 }

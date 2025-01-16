@@ -109,7 +109,7 @@ export async function registerSettings() {
       advanced: true,
       value: 100,
       minimum: 50,
-      maximum: 300,
+      maximum: 500,
       type: SettingItemType.Int,
       section: sectionName,
       public: true,

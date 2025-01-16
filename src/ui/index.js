@@ -92,16 +92,18 @@ function createGraph() {
         const r = Math.max(10 - 3 * depth, 4);
         const maxLabelWidth = 150;
         context.beginPath();
+        context.globalAlpha = 0.7;
         context.strokeStyle = "#999";
         context.fillStyle = "#999";
         context.lineWidth = 1.0;
         if (spanningTree.includes(node.id)) {
-            context.fillStyle = "#595";
+            context.fillStyle = "#484";
         }
 
         if (node.focused) {
-            context.strokeStyle = "#595";
-            context.fillStyle = "#595";
+            context.globalAlpha = 1;
+            context.strokeStyle = "#484";
+            context.fillStyle = "#484";
         }
         context.moveTo(node.x + r, node.y);
         context.arc(node.x, node.y, r, 0, 2 * Math.PI);
@@ -118,7 +120,7 @@ function createGraph() {
         context.strokeStyle = "#999";
 
         if (link.focused) {
-            context.globalAlpha = 1;
+            context.globalAlpha = 0.7;
         }
 
         const x1 = link.source.x,
@@ -161,15 +163,21 @@ function createGraph() {
 
         context.save();
 
-        if (!transform) transform = d3.zoomIdentity;
-
         context.translate(transform.x, transform.y);
         context.scale(transform.k, transform.k);
 
         graphLinks.forEach(drawLink);
 
-        context.globalAlpha = 1;
-        graphNodes.forEach(drawNode);
+
+        const postponedNodes = [];
+        for (const d of graphNodes) {
+            if (d.focused) { 
+                postponedNodes.push(d);
+                continue; 
+            }
+            drawNode(d);
+        }
+        postponedNodes.forEach(drawNode)
 
         context.restore();
     };

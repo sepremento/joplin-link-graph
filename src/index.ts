@@ -173,7 +173,7 @@ async function drawPanel(panel) {
 </div>
 <div class="control-block">
 <label for="radius-scale-input">Radius</label>
-<input class="settings slider" id="radius-scale-input" type="range" min="50" max="300" value="100"></input>
+<input class="settings slider" id="radius-scale-input" type="range" min="50" max="500" value="100"></input>
 </div>
 <div class="control-block">
 <label for="temperature-slider">Alpha</label>

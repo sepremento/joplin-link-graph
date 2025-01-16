@@ -7,6 +7,7 @@ const distOutput = document.getElementById("distance-output");
 const chargeStrengthInput = document.getElementById("charge-strength-input");
 const centerStrenthInput = document.getElementById("center-strength-input");
 const collideRadiusInput = document.getElementById("nocollide-radius-input");
+const radiusScaleInput = document.getElementById("radius-scale-input");
 const linkStrenthInput = document.getElementById("link-strength-input");
 const linkDistanceInput = document.getElementById("link-distance-input");
 const maxDistInput = document.getElementById("distance-slider");
@@ -69,6 +70,7 @@ export function setupGraphHandle(settings) {
     chargeStrengthInput.value = settings.chargeStrength;
     centerStrenthInput.value = settings.centerStrength;
     collideRadiusInput.value = settings.collideRadius;
+    radiusScaleInput.value = settings.radiusScale;
     linkDistanceInput.value = settings.linkDistance;
     linkStrenthInput.value = settings.linkStrength;
     temperatureInput.value = settings.alpha;
@@ -88,6 +90,9 @@ export function initFront(initialValues, setSetting, poll) {
     });
     collideRadiusInput.addEventListener("change", () => {
         setSetting("COLLIDE_RADIUS", collideRadiusInput.valueAsNumber);
+    });
+    radiusScaleInput.addEventListener("change", () => {
+        setSetting("RADIUS_SCALE", radiusScaleInput.valueAsNumber);
     });
     linkStrenthInput.addEventListener("change", () => {
         setSetting("LINK_STRENGTH", linkStrenthInput.valueAsNumber);

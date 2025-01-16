@@ -105,6 +105,18 @@ export async function registerSettings() {
       description:
         "",
     },
+    RADIUS_SCALE: {
+      advanced: true,
+      value: 100,
+      minimum: 50,
+      maximum: 300,
+      type: SettingItemType.Int,
+      section: sectionName,
+      public: true,
+      label: "Collide force radius",
+      description:
+        "",
+    },
     LINK_DISTANCE: {
       advanced: true,
       value: 200,

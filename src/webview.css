@@ -36,7 +36,7 @@ details:not([open]) {
 }
 
 details[open] {
-    height: 16em;
+    height: 19em;
 }
 
 details:hover {

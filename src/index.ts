@@ -54,6 +54,7 @@ async function collectGraphSettings() {
         chargeStrength: await joplin.settings.value('CHARGE_STRENGTH'),
         centerStrength: await joplin.settings.value('CENTER_STRENGTH'),
         collideRadius: await joplin.settings.value('COLLIDE_RADIUS'),
+        radiusScale: await joplin.settings.value('RADIUS_SCALE'),
         linkDistance: await joplin.settings.value('LINK_DISTANCE'),
         linkStrength: await joplin.settings.value('LINK_STRENGTH'),
         alpha: await joplin.settings.value('ALPHA'),
@@ -171,8 +172,12 @@ async function drawPanel(panel) {
 <input class="settings" id="center-strength-input" type="number"></input>
 </div>
 <div class="control-block">
-<label for="temperature-slider">Alpha Target</label>
-<input class="settings slider" id="temperature-slider" type="range" class="slider" min="0" max="100" value="30"></input>
+<label for="radius-scale-input">Radius</label>
+<input class="settings slider" id="radius-scale-input" type="range" min="50" max="300" value="100"></input>
+</div>
+<div class="control-block">
+<label for="temperature-slider">Alpha</label>
+<input class="settings slider" id="temperature-slider" type="range" min="0" max="100" value="30"></input>
 </div>
 <div class="control-block">
 <label for="center-strength-input">Backlinks</label>
@@ -336,11 +341,15 @@ async function updateUI(eventName: string, supplement?) {
             data.graphSettings = graphSettings;
         }
     } else if (eventName === "processRequestedUpdate") {
-        const query = supplement.query
+        const query = supplement.query;
+        const degree = supplement.degree;
+        
+        joplin.settings.setValue("MAX_TREE_DEPTH", degree);
+
         if (query) {
-            data = await executeSearchQuery(query, supplement.degree)
+            data = await executeSearchQuery(query, degree)
         } else {
-            data = await fetchData(supplement.degree);
+            data = await fetchData(degree);
         }
     } else if (eventName === "pushSettings") {
         data.graphSettings = graphSettings;

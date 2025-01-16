@@ -216,13 +216,14 @@ function createGraph() {
     };
 
     function initSimulation() {
+        const r = graphSettings.radiusScale * Math.min(centerX, centerY) / 100;
         return d3.forceSimulation(graphNodes)
             .force("link", d3.forceLink(graphLinks)
                 .id(d => d.id)
                 .distance(graphSettings.linkDistance)
                 .strength(graphSettings.linkStrength / 100)
             )
-            .force("circle", d3.forceRadial(Math.min(centerX, centerY), centerX, centerY))
+            .force("circle", d3.forceRadial(r, centerX, centerY))
             .force("charge", d3.forceManyBody()
                 .strength(graphSettings.chargeStrength)
             )
@@ -326,9 +327,11 @@ function createGraph() {
             graphSettings = Object.assign(graphSettings, data.graphSettings);
             userInput.setupGraphHandle(graphSettings);
 
+            const r = graphSettings.radiusScale * Math.min(centerX, centerY) / 100;
             simulation.force("link")
                 .distance(graphSettings.linkDistance)
                 .strength(graphSettings.linkStrength / 100);
+            simulation.force("circle").radius(r);
             simulation.force("charge").strength(graphSettings.chargeStrength);
             simulation.force("center").strength(graphSettings.centerStrength / 100);
             simulation.force("nocollide").radius(graphSettings.collideRadius);

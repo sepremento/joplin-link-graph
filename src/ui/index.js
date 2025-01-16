@@ -92,18 +92,24 @@ function createGraph() {
         const r = Math.max(10 - 3 * depth, 4);
         const maxLabelWidth = 150;
         context.beginPath();
-        context.globalAlpha = 0.7;
+        context.globalAlpha = 0.8;
         context.strokeStyle = "#999";
         context.fillStyle = "#999";
         context.lineWidth = 1.0;
         if (spanningTree.includes(node.id)) {
-            context.fillStyle = "#484";
+            context.fillStyle = "#595";
         }
 
         if (node.focused) {
             context.globalAlpha = 1;
-            context.strokeStyle = "#484";
-            context.fillStyle = "#484";
+            context.strokeStyle = "#595";
+            context.fillStyle = "#595";
+        }
+
+        if (node.faded) {
+            context.globalAlpha = 0.5;
+            context.fillStyle = "#A0A0A0";
+            context.strokeStyle = "#A0A0A0";
         }
         context.moveTo(node.x + r, node.y);
         context.arc(node.x, node.y, r, 0, 2 * Math.PI);
@@ -120,7 +126,11 @@ function createGraph() {
         context.strokeStyle = "#999";
 
         if (link.focused) {
-            context.globalAlpha = 0.7;
+            context.globalAlpha = 0.8;
+        }
+
+        if (link.faded) {
+            context.globalAlpha = 0.05;
         }
 
         const x1 = link.source.x,
@@ -201,26 +211,43 @@ function createGraph() {
         clearTimeout(timer);
         timer = setTimeout(() => {
             const node = findNode(event, graphNodes);
-            const adjacentNodes = [];
-            for (let link of graphLinks) {
-                link.focused = false;
-                if (node && (link.source.id === node.id || link.target.id === node.id)) {
-                    link.focused = true;
-                    adjacentNodes.push(link.target.id);
+            if (!node) {
+                for (let link of graphLinks) {
+                    link.focused = false;
+                    link.faded = false;
                 }
-            }
-
-            for (let n of graphNodes) {
-                n.focused = false;
-                if (node && adjacentNodes.includes(n.id)) {
-                    n.focused = true;
+                for (let node of graphNodes) {
+                    node.focused = false;
+                    node.faded = false;
+                }
+            } else {
+                const adjacentNodes = [];
+                for (let link of graphLinks) {
+                    if (link.source.id === node.id || link.target.id === node.id) {
+                        link.faded = false;
+                        link.focused = true;
+                        adjacentNodes.push(link.target.id);
+                        adjacentNodes.push(link.source.id);
+                    } else {
+                        link.faded = true;
+                        link.focused = false;
+                    }
+                }
+                for (let n of graphNodes) {
+                    if (adjacentNodes.includes(n.id)) {
+                        n.faded = false;
+                        n.focused = true;
+                    } else {
+                        n.faded = true;
+                        n.focused = false;
+                    }
                 }
             }
 
             simulation.nodes(graphNodes);
             simulation.force("link").links(graphLinks);
             draw();
-        }, 150)
+        }, 85)
     };
 
     function initSimulation() {

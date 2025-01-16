@@ -350,23 +350,3 @@ async function getAllBacklinksForNote(noteId: string) {
   return links;
 }
 
-
-type Tag = {
-  id: string;
-  title: string;
-};
-
-
-export async function getNoteTags(noteId: string) {
-  const tags: Tag[] = [];
-  let pageNum = 1;
-  let response;
-  do {
-    response = await joplin.data.get(["notes", noteId, "tags"], {
-      fields: ["id", "title"],
-      page: pageNum++,
-    });
-    tags.push(...response.items);
-  } while (response.has_more);
-  return tags;
-}

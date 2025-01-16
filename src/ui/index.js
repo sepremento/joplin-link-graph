@@ -3,70 +3,51 @@ import * as userInput from "./user-input.js"
 
 var width = window.innerWidth;
 var height = window.innerHeight;
+const centerX = width / 2;
+const centerY = height / 2;
 
 
 // first functions are for communication with the plugin
 
-function poll() {
-  webviewApi.postMessage({
-    name: "poll"
-  }).then((event) => {
-    if (event.name === "initialGraph") { graph.update(event.data); }
-    if (event.name === "noteSelectionChange") { graph.update(event.data); }
-    if (event.name === "settingsChange") { graph.update(event.data); }
-    if (event.name === "noteChange:title") { graph.update(event.resp) }
-    if (event.name === "noteChange:links") { graph.update(event.data) }
-    poll();
-  });
-}
-
-function update() {
-  webviewApi.postMessage({
-    name: "update"
-  }).then((event) => {
-    if (event.data) {
-      graph.update(event.data);
-    }
-  });
-}
-
-function processUserQuery(query) {
-  if (!query) { return; }
-  webviewApi.postMessage({
-    name: "search-query",
-    query: query 
-  }).then((event) => {
-    if (event.data) {
-      graph.update(event.data);
-    }
-  });
-}
-
-function openNote(event, i) {
-  if (event.ctrlKey) {
+function poll(msg) {
     webviewApi.postMessage({
-      name: "navigateTo",
-      id: i.id
-    });
-  }
+        name: "poll",
+        msg: msg
+    }).then((resp) => {
+            if (resp.name === "initialGraph") graph.init(resp.data);
+            if (resp.name === "pushSettings") graph.updateSettings(resp.data);
+            if (resp.name === "noteChange:title") graph.updateNodeLabel(resp.resp); 
+            if (resp.name === "noteChange:links" || resp.name === "noteSelectionChange")
+                graph.updateGraph(resp.data);
+            poll();
+        });
+}
+
+function requestUpdate(query, degree) {
+    webviewApi.postMessage({
+        name: "request_update",
+        query: query,
+        degree: degree
+    }).then((event) => {
+            if (event.data) {
+                graph.updateGraph(event.data);
+                poll();
+            }
+        });
 }
 
 function setSetting(settingName, newVal) {
-  // will automically trigger ui update of graph
-  return webviewApi.postMessage({
-    name: "set_setting",
-    key: settingName,
-    value: newVal,
-  });
-}
-
-function getSettings() {
-  return webviewApi.postMessage({ name: "get_settings", })
+    // will automically trigger ui update of graph
+    return webviewApi.postMessage({
+        name: "set_setting",
+        key: settingName,
+        value: newVal,
+    });
 }
 
 // next graph functions
 
-function chart() {
+function createGraph() {
 
     const canvas = d3.select('#note_graph')
     .append('canvas')
@@ -76,263 +57,289 @@ function chart() {
 
     const context = canvas.getContext('2d');
 
-    let transform = d3.zoomIdentity;
+    let graphNodes = [];
+    let graphNodesMap = new Map();
+    let graphLinks = [];
+    let spanningTree = [];
+    let graphSettings = {};
 
-    let oldNodes = new Map();
-    let oldLinks = [];
-    let oldSpanningTree = [];
-    let oldGraphSettings = {};
+    let simulation;
+    let transform;
+    let timer;
+
+    function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+    };
+
+    function dragged(event) {
+        const [px, py] = d3.pointer(event, canvas);
+        event.subject.fx = transform.invertX(px);
+        event.subject.fy = transform.invertY(py);
+    };
+
+    function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+    };
+
+    function drawNode(node) {
+        const depth = node.distanceToCurrentNode
+            ? node.distanceToCurrentNode
+            : 0;
+        const r = Math.max(10 - 3 * depth, 4);
+        const maxLabelWidth = 150;
+        context.beginPath();
+        context.strokeStyle = "#999";
+        context.fillStyle = "#999";
+        context.lineWidth = 1.0;
+        if (spanningTree.includes(node.id)) {
+            context.fillStyle = "#595";
+        }
+
+        if (node.focused) {
+            context.strokeStyle = "#595";
+            context.fillStyle = "#595";
+        }
+        context.moveTo(node.x + r, node.y);
+        context.arc(node.x, node.y, r, 0, 2 * Math.PI);
+        context.fill();
+        if (transform.k >= 0.7) {
+            wrapNodeText(context, node, r, maxLabelWidth);
+        }
+        context.stroke();
+    };
+
+    function drawLink(link) {
+        context.beginPath();        
+        context.globalAlpha = 0.1;
+        context.strokeStyle = "#999";
+
+        if (link.focused) {
+            context.globalAlpha = 1;
+        }
+
+        const x1 = link.source.x,
+        x2 = link.target.x,
+        y1 = link.source.y,
+        y2 = link.target.y;
+        const arrowLen = 10;
+        const depth = link.target.distanceToCurrentNode
+            ? link.target.distanceToCurrentNode
+            : 0;
+        const offset = Math.max(10 - 3 * depth, 4);
+        const lineLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        const xa = x2 - (offset / lineLength) * (x2 - x1);
+        const ya = y2 - (offset / lineLength) * (y2 - y1);
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+
+        context.moveTo(x1, y1);
+        context.lineTo(x2, y2);
+
+        // Конечная точка стрелки
+        context.moveTo(xa, ya);
+
+        // Линия стрелки (левое крыло)
+        context.lineTo(
+            xa - arrowLen * Math.cos(angle - Math.PI / 6),
+            ya - arrowLen * Math.sin(angle - Math.PI / 6)
+        );
+
+        // Линия стрелки (правое крыло)
+        context.moveTo(xa, ya);
+        context.lineTo(
+            xa - arrowLen * Math.cos(angle + Math.PI / 6),
+            ya - arrowLen * Math.sin(angle + Math.PI / 6)
+        );
+        context.stroke();
+    };
+
+    function draw() {
+        context.clearRect(0, 0, width, height);
+
+        context.save();
+
+        if (!transform) transform = d3.zoomIdentity;
+
+        context.translate(transform.x, transform.y);
+        context.scale(transform.k, transform.k);
+
+        graphLinks.forEach(drawLink);
+
+        context.globalAlpha = 1;
+        graphNodes.forEach(drawNode);
+
+        context.restore();
+    };
+
+    function findNode(event, nodes) {
+        const [px, py] = d3.pointer(event, canvas);
+        const xi = transform.invertX(px);
+        const yi = transform.invertY(py);
+        const node = d3.least(nodes, ({x, y}) => {
+            const dist2 = (x - xi) ** 2 + (y - yi) ** 2;
+            if (dist2 < 400) return dist2;
+        });
+        if (node) {
+            node.px = px;
+            node.py = py;
+        }
+        return node;
+    };
+
+    function highlightRegion(event) {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            const node = findNode(event, graphNodes);
+            const adjacentNodes = [];
+            for (let link of graphLinks) {
+                link.focused = false;
+                if (node && (link.source.id === node.id || link.target.id === node.id)) {
+                    link.focused = true;
+                    adjacentNodes.push(link.target.id);
+                }
+            }
+
+            for (let n of graphNodes) {
+                n.focused = false;
+                if (node && adjacentNodes.includes(n.id)) {
+                    n.focused = true;
+                }
+            }
+
+            simulation.nodes(graphNodes);
+            simulation.force("link").links(graphLinks);
+            draw();
+        }, 150)
+    };
+
+    function initSimulation() {
+        return d3.forceSimulation(graphNodes)
+            .force("link", d3.forceLink(graphLinks)
+                .id(d => d.id)
+                .distance(graphSettings.linkDistance)
+                .strength(graphSettings.linkStrength / 100)
+            )
+            .force("circle", d3.forceRadial(Math.min(centerX, centerY), centerX, centerY))
+            .force("charge", d3.forceManyBody()
+                .strength(graphSettings.chargeStrength)
+            )
+            .force("center", d3.forceCenter(centerX, centerY)
+                .strength(graphSettings.centerStrength / 100)
+            )
+            .force("nocollide", d3.forceCollide(48)
+                .radius(graphSettings.collideRadius)
+            )
+            .alpha(graphSettings.alpha / 100)
+            .on("tick", draw);
+    };
+
+    function openNote(event) {
+        const node = findNode(event, graphNodes);
+        if (event.ctrlKey) {
+            webviewApi.postMessage({
+                name: "open_note",
+                id: node.id
+            });
+        }
+    };
+
+    function wrapNodeText(context, d, r, width) {
+        var text = d.title, lineHeight = 16,
+        words = text.split(/\s+/).reverse(),
+        word, line = [], len, N = 0,
+        offset = (2 * r) + 4;
+
+        while (word = words.pop()) {
+            line.push(word);
+            len = context.measureText(line.join(" ")).width;
+            if (len > width) {
+                line.pop();
+                context.fillText(line.join(" "), d.x - width / 2, d.y + offset + N * lineHeight);
+                N += 1;
+                line = [word]
+                len = context.measureText(line.join(" ")).width;
+            }
+        }
+        context.fillText(line.join(" "), d.x - len / 2 , d.y + offset + N * lineHeight);
+    }
+
+    function zoomed(event) {
+        transform = event.transform;
+        draw();
+    }
 
     return Object.assign(canvas, {
 
-        update(data) {
-            let nodes, links
-            if (data.updateType === "updateNodeTitle") {
-                const updatedNode = oldNodes.get(data.noteId);
-                if (updatedNode) { updatedNode.title = data.newTitle; }
+        init(data) {
 
-                nodes = Array.from(oldNodes.values());
-                links = oldLinks;
-                data.graphSettings = oldGraphSettings;
-                data.spanningTree = oldSpanningTree;
-            } else {
-                nodes = data.nodes.map(d => Object.assign(oldNodes.get(d.id) || {}, d));
-                links = data.edges.map(d => Object.assign({}, d));
+            graphNodes = data.nodes;
+            graphLinks = data.edges;
+            graphSettings = data.graphSettings;
+            spanningTree = data.spanningTree;
 
-                oldNodes = new Map(nodes.map(d => [d.id, d]));
-                oldLinks = links;
-                oldGraphSettings = Object.assign(oldGraphSettings, data.graphSettings);
-                oldSpanningTree = data.spanningTree;
-            }
+            userInput.initFront(graphSettings, setSetting, requestUpdate);
 
-            const simulation = d3.forceSimulation(nodes)
-            .force("link", d3.forceLink(links)
-                .id(d => d.id)
-                .distance(data.graphSettings.linkDistance)
-                .strength(data.graphSettings.linkStrength / 100)
-            )
-            .force("charge", d3.forceManyBody()
-                .strength(data.graphSettings.chargeStrength)
-            )
-            .force("center", d3.forceCenter(width / 2, height / 2)
-                .strength(data.graphSettings.centerStrength / 100)
-            )
-            .force("nocollide", d3.forceCollide(48)
-                .radius(data.graphSettings.collideRadius)
-            )
-            .alpha(data.graphSettings.alpha / 100)
-            .on("tick", draw);
+            for (let node of graphNodes) graphNodesMap.set(node.id, node);
 
-            let timer;
-
-            function showInfo(event) {
-                clearTimeout(timer);
-                timer = setTimeout(mouseStopped, 150, event)
-            }
-
-            function clickOpenNote(event) {
-                const node = findNode(event, nodes);
-                openNote(event, node)
-            }
-
-            function draw() {
-                context.clearRect(0, 0, width, height);
-
-                context.save();
-                context.translate(transform.x, transform.y);
-                context.scale(transform.k, transform.k);
-                links.forEach(drawLink);
-
-                context.globalAlpha = 1;
-                nodes.forEach(drawNode);
-                context.restore();
-            }
-
-            function drawLink(d) {
-                context.beginPath();        
-                // Возможный вариант оформления обратных ссылок
-                // const sourceDist = d.sourceDistanceToCurrentNode;
-                // const targetDist = d.targetDistanceToCurrentNode;
-                // const inwardLink = sourceDist > targetDist;
-                // if (inwardLink) { }
-                context.globalAlpha = 0.1;
-                context.strokeStyle = "#999";
-
-                if (d.focused) {
-                    context.globalAlpha = 1;
-                }
-
-                const x1 = d.source.x,
-                    x2 = d.target.x,
-                    y1 = d.source.y,
-                    y2 = d.target.y;
-                const arrowLen = 10;
-                // const offset = 8;
-                const depth = d.target.distanceToCurrentNode ? d.target.distanceToCurrentNode : 0;
-                const offset = Math.max(10 - 3 * depth, 4);
-                const lineLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-                const xa = x2 - (offset / lineLength) * (x2 - x1);
-                const ya = y2 - (offset / lineLength) * (y2 - y1);
-                const angle = Math.atan2(y2 - y1, x2 - x1);
-
-                context.moveTo(x1, y1);
-                context.lineTo(x2, y2);
-
-                // Конечная точка стрелки
-                context.moveTo(xa, ya);
-
-                // Линия стрелки (левое крыло)
-                context.lineTo(
-                    xa - arrowLen * Math.cos(angle - Math.PI / 6),
-                    ya - arrowLen * Math.sin(angle - Math.PI / 6)
-                );
-
-                // Линия стрелки (правое крыло)
-                context.moveTo(xa, ya);
-                context.lineTo(
-                    xa - arrowLen * Math.cos(angle + Math.PI / 6),
-                    ya - arrowLen * Math.sin(angle + Math.PI / 6)
-                );
-                context.stroke();
-            }
-
-            function drawNode(d) {
-                const depth = d.distanceToCurrentNode ? d.distanceToCurrentNode : 0;
-                const r = Math.max(10 - 3 * depth, 4);
-                const maxLabelWidth = 150;
-                context.beginPath();
-                context.strokeStyle = "#999";
-                context.fillStyle = "#999";
-                context.lineWidth = 1.0;
-                if (data.spanningTree.includes(d.id)) {
-                    context.fillStyle = "#595";
-                }
-
-                if (d.focused) {
-                    context.strokeStyle = "#595";
-                    context.fillStyle = "#595";
-                }
-                context.moveTo(d.x + r, d.y);
-                context.arc(d.x, d.y, r, 0, 2 * Math.PI);
-                context.fill();
-                if (transform.k >= 0.7) {
-                    wrapNodeText(context, d, r, maxLabelWidth);
-                }
-                context.stroke();
-            }
-
-            function findNode(event, nodes) {
-                const [px, py] = d3.pointer(event, canvas);
-                const xi = transform.invertX(px);
-                const yi = transform.invertY(py);
-                const node = d3.least(nodes, ({x, y}) => {
-                    const dist2 = (x - xi) ** 2 + (y - yi) ** 2;
-                    if (dist2 < 400) return dist2;
-                });
-                if (node) {
-                    node.px = px;
-                    node.py = py;
-                }
-                return node;
-            }
-
-            function highlightSelectedNodeAndLinks(node) {
-                const adjacentNodes = [];
-                for (let link of links) {
-                    link.focused = false;
-                    if (node && (link.source.id === node.id || link.target.id === node.id)) {
-                        link.focused = true;
-                        adjacentNodes.push(link.target.id);
-                    }
-                }
-
-                for (let n of nodes) {
-                    n.focused = false;
-                    if (node && adjacentNodes.includes(n.id)) {
-                        n.focused = true;
-                    }
-                }
-
-                simulation.nodes(nodes);
-                simulation.force("link").links(links);
-                draw();
-            }
-
-            function mouseStopped(event) {
-                const node = findNode(event, nodes);
-                highlightSelectedNodeAndLinks(node);
-            }
+            transform = d3.zoomIdentity;
+            simulation = initSimulation();
 
             d3.select(canvas)
-                .on('mousemove', showInfo)
-                .on('click', clickOpenNote)
+                .on('mousemove', highlightRegion)
+                .on('click', openNote)
                 .call(d3.drag()
-                    .subject(event => findNode(event, nodes))
+                    .subject(event => findNode(event, graphNodes))
                     .on("start", dragstarted)
                     .on("drag", dragged)
                     .on("end", dragended))
                 .call(d3.zoom()
                     .scaleExtent([1/10, 8])
                     .on('zoom', zoomed));
+        },
 
-            function dragstarted(event) {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                event.subject.fx = event.subject.x;
-                event.subject.fy = event.subject.y;
-            }
+        updateGraph(data) {
+            graphNodes = data.nodes.map(d => {
+                if (!graphNodesMap.has(d.id)) graphNodesMap.set(d.id, d);
+                return Object.assign(graphNodesMap.get(d.id) || {}, d);
+            }); 
+            graphLinks = data.edges;
+            spanningTree = data.spanningTree;
 
-            function dragged(event) {
-                const [px, py] = d3.pointer(event, canvas);
-                event.subject.fx = transform.invertX(px);
-                event.subject.fy = transform.invertY(py);
-            }
+            if (!simulation) simulation = initSimulation();
 
-            function dragended(event) {
-                if (!event.active) simulation.alphaTarget(0);
-                event.subject.fx = null;
-                event.subject.fy = null;
-            }
+            simulation.nodes(graphNodes);
+            simulation.force("link").links(graphLinks);
+            simulation.alpha(graphSettings.alpha / 100).restart();
+        },
 
-            function zoomed(event) {
-                transform = event.transform;
-                draw();
-            }
+        updateNodeLabel(data) {
+            const node = graphNodes.find((n) => n.id === data.noteId);
+            node.title = data.newTitle;
 
-            const parents = new Array(nodes.length);
-            for (let i=0; i<nodes.length; ++i) { parents[i] = nodes[i].folder; }
-        }
+            if (transform.k > 0.7) draw();
+        },
+
+        updateSettings(data) {
+            graphSettings = Object.assign(graphSettings, data.graphSettings);
+            userInput.setupGraphHandle(graphSettings);
+
+            simulation.force("link")
+                .distance(graphSettings.linkDistance)
+                .strength(graphSettings.linkStrength / 100);
+            simulation.force("charge").strength(graphSettings.chargeStrength);
+            simulation.force("center").strength(graphSettings.centerStrength / 100);
+            simulation.force("nocollide").radius(graphSettings.collideRadius);
+
+            simulation.alpha(graphSettings.alpha / 100);
+            simulation.restart();
+        },
     });
 }
 
-function wrapNodeText(context, d, r, width) {
-    var text = d.title, lineHeight = 16,
-    words = text.split(/\s+/).reverse(),
-    word, line = [], len, N = 0,
-    offset = (2 * r) + 4;
+var graph = createGraph();
 
-    while (word = words.pop()) {
-        line.push(word);
-        len = context.measureText(line.join(" ")).width;
-        if (len > width) {
-            line.pop();
-            context.fillText(line.join(" "), d.x - width / 2, d.y + offset + N * lineHeight);
-            N += 1;
-            line = [word]
-            len = context.measureText(line.join(" ")).width;
-        }
-    }
-    context.fillText(line.join(" "), d.x - len / 2 , d.y + offset + N * lineHeight);
-}
-
-var graph = chart();
-
-userInput.initQueryInput(processUserQuery);
-
-getSettings().then((initialValues) => {
-  // todo: shorten up, when top-level await available
-  userInput.init(initialValues, setSetting, update);
-  update();
-});
-
-poll();
+poll("init");
 

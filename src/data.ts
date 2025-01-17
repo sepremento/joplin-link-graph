@@ -247,18 +247,6 @@ async function getLinkedNodes(
             }
         }
 
-        if (showTags) {
-            const tagNodes = await buildTagNodes(nodeMap);
-
-            for (let [id, tag] of tagNodes.entries()) {
-                if (!nodeMap.has(id)) nodeMap.set(id, tag);
-
-                for (let link of tag.links) {
-                    if (!visited.has(link)) pending.push(link);
-                }
-            }
-        }
-
         for (const joplinNote of joplinNotes) {
             // store note data to be returned at the end of the traversal
             const node = buildNodeFromNote(joplinNote);
@@ -285,6 +273,19 @@ async function getLinkedNodes(
                 }
             }
         }
+
+        if (showTags) {
+            const tagNodes = await buildTagNodes(nodeMap);
+
+            for (let [id, tag] of tagNodes.entries()) {
+                if (!nodeMap.has(id)) nodeMap.set(id, tag);
+
+                for (let link of tag.links) {
+                    if (!visited.has(link)) pending.push(link);
+                }
+            }
+        }
+
         degree++;
 
         // stop whenever we've reached the maximum degree of separation, or

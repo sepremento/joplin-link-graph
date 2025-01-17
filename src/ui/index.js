@@ -114,8 +114,7 @@ function createGraph() {
 
         if (node.is_tag) {
             r = 12;
-            context.fillStyle = "#5A325A";
-            context.strokeStyle = "#5A325A";
+            context.fillStyle = "#834983";
         }
 
         context.moveTo(node.x + r, node.y);

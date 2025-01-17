@@ -3,6 +3,7 @@ import * as joplinData from "./data";
 import { registerSettings } from "./settings";
 import { Edge, Node, GraphData, GraphSettings } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
+import { hasUncaughtExceptionCaptureCallback } from "process";
 var deepEqual = require("fast-deep-equal");
 
 let data: GraphData;
@@ -57,12 +58,12 @@ async function collectGraphSettings() {
         radiusScale: await joplin.settings.value('RADIUS_SCALE'),
         linkDistance: await joplin.settings.value('LINK_DISTANCE'),
         linkStrength: await joplin.settings.value('LINK_STRENGTH'),
+        showTags: await joplin.settings.value('SHOW_TAGS'),
         alpha: await joplin.settings.value('ALPHA'),
     }
 }
 
 async function fetchData(maxDegree, fetchForNotes?) {
-    // Load settings
     const fetchForNoteIds: Array<string> = [];
 
     if (typeof(fetchForNotes) === "undefined") {
@@ -74,7 +75,7 @@ async function fetchData(maxDegree, fetchForNotes?) {
         }
     }
 
-    const notes = await joplinData.getNotes(fetchForNoteIds, maxDegree);
+    const nodes = await joplinData.getNodes(fetchForNoteIds, maxDegree);
 
     const data: GraphData = {
         nodes: [],
@@ -83,38 +84,29 @@ async function fetchData(maxDegree, fetchForNotes?) {
         graphSettings: {}
     };
 
-    for (let [id, note] of notes.entries()) {
-        for (let link of note.links) {
+    for (let [id, node] of nodes.entries()) {
+        for (let link of node.links) {
             // Slice note link if link directs to an anchor
             var index = link.indexOf("#");
             if (index != -1) { link = link.substr(0, index); }
 
             // The destination note could have been deleted.
-            const linkDestExists = notes.has(link);
+            const linkDestExists = nodes.has(link);
             if (!linkDestExists) { continue; }
 
             data.edges.push({
                 source: id,
                 target: link,
             });
-
-            // Mark nodes that are adjacent to the currently selected note.
-            if (fetchForNoteIds.includes(id)) {
-                notes.get(link).linkedToCurrentNote = true;
-            } else if (fetchForNoteIds.includes(link)) {
-                notes.get(id).linkedToCurrentNote = true;
-            } else {
-                const l = notes.get(link);
-                l.linkedToCurrentNote = l.linkedToCurrentNote || false;
-            }
         }
 
         data.nodes.push({
             id: id,
-            title: note.title,
-            parent_id: note.parent_id,
-            folder: note.folder,
-            distanceToCurrentNode: note.distanceToCurrentNote
+            title: node.title,
+            parent_id: node.parent_id,
+            folder: node.folder,
+            is_tag: node.is_tag,
+            distanceToCurrentNode: node.distanceToCurrentNote
         });
 
     }
@@ -141,51 +133,60 @@ async function drawPanel(panel) {
 <div id="graph-handle">
 <div class="drag-handle"></div>
 <div id="cb1" class="control-block">
-<label for="query-input">Query</label>
+<label class="label" for="query-input">Query</label>
 <input id="query-input" type="string"></input>
 </div>
 <div class="control-block">
-<label for="distance-slider">Max. distance</label>
+<label class="label" for="distance-slider">Max. distance</label>
 <input class="settings slider" id="distance-slider" class="slider" type="range" min="0" max="5" value="2"> </input>
 <output id="distance-output">2</output>
 </div>
-<details>
-<summary>Graph Parameters</summary>
-<div class="force-block">
-<label for="nocollide-radius-input">No Collide Radius</label>
-<input class="settings" id="nocollide-radius-input" type="number"></input>
-</div>
-<div class="force-block">
-<label for="link-distance-input">Link Distance</label>
-<input class="settings" id="link-distance-input" type="number"></input>
-</div>
-<div class="force-block">
-<label for="link-strength-input">Link Strength</label>
-<input class="settings" id="link-strength-input" type="number"></input>
-</div>
-<div class="force-block">
-<label for="charge-strength-input">Charge Strength</label>
-<input class="settings" id="charge-strength-input" type="number"></input>
-</div>
-<div class="force-block">
-<label for="center-strength-input">Center Strength</label>
-<input class="settings" id="center-strength-input" type="number"></input>
-</div>
 <div class="control-block">
-<label for="radius-scale-input">Radius</label>
-<input class="settings slider" id="radius-scale-input" type="range" min="50" max="500" value="100"></input>
+<label class="label" for="show-tags-switch">Show Tags</label>
+<label class="switch">
+<input type="checkbox" id="show-tags-switch" checked></input>
+<span class="toggle"></span>
+</label>
 </div>
+<!--
 <div class="control-block">
-<label for="temperature-slider">Alpha</label>
-<input class="settings slider" id="temperature-slider" type="range" min="0" max="100" value="30"></input>
-</div>
-<div class="control-block">
-<label for="center-strength-input">Backlinks</label>
+<label class="label" for="center-strength-input">Backlinks</label>
 <select id="center-strength-input" type="number">
 <option value="backlinks-off">Backlinks Off</option>
 <option value="backlinks-on">Backlinks On</option>
 <option value="directed-graph">Directed Graph</option>
 </select>
+</div>
+-->
+<details>
+<summary>Graph Parameters</summary>
+<div class="force-block">
+<label class="label" for="nocollide-radius-input">No Collide Radius</label>
+<input class="settings" id="nocollide-radius-input" type="number"></input>
+</div>
+<div class="force-block">
+<label class="label" for="link-distance-input">Link Distance</label>
+<input class="settings" id="link-distance-input" type="number"></input>
+</div>
+<div class="force-block">
+<label class="label" for="link-strength-input">Link Strength</label>
+<input class="settings" id="link-strength-input" type="number"></input>
+</div>
+<div class="force-block">
+<label class="label" for="charge-strength-input">Charge Strength</label>
+<input class="settings" id="charge-strength-input" type="number"></input>
+</div>
+<div class="force-block">
+<label class="label" for="center-strength-input">Center Strength</label>
+<input class="settings" id="center-strength-input" type="number"></input>
+</div>
+<div class="control-block">
+<label class="label" for="radius-scale-input">Radius</label>
+<input class="settings slider" id="radius-scale-input" type="range" min="50" max="500" value="100"></input>
+</div>
+<div class="control-block">
+<label class="label" for="temperature-slider">Alpha</label>
+<input class="settings slider" id="temperature-slider" type="range" min="0" max="100" value="30"></input>
 </div>
 </details>
 </div>
@@ -243,6 +244,8 @@ async function processWebviewMessage(message) {
             return promise;
         case "open_note":
             return joplin.commands.execute("openNote", message.id);
+        case "open_tag":
+            return joplin.commands.execute("openTag", message.id);
         case "set_setting":
             return await joplin.settings.setValue(message.key, message.value);
     }
@@ -343,8 +346,10 @@ async function updateUI(eventName: string, supplement?) {
     } else if (eventName === "processRequestedUpdate") {
         const query = supplement.query;
         const degree = supplement.degree;
+        const showTags = supplement.showTags;
         
         joplin.settings.setValue("MAX_TREE_DEPTH", degree);
+        joplin.settings.setValue("SHOW_TAGS", showTags);
 
         if (query) {
             data = await executeSearchQuery(query, degree)

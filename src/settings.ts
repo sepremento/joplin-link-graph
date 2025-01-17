@@ -75,6 +75,15 @@ export async function registerSettings() {
       description:
         "Backlinks are links that other notes have to the selected note. Note: This setting is targeted towards selection-based graphs with degree of separation > 0.",
     },
+    SHOW_TAGS: {
+      value: true,
+      type: SettingItemType.Bool,
+      section: sectionName,
+      public: true,
+      label: "Show tags as nodes in a graph",
+      description:
+        "",
+    },
     CHARGE_STRENGTH: {
       advanced: true,
       value: 20,

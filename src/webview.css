@@ -63,6 +63,20 @@ input:focus, select:focus {
     outline: none;
 }
 
+input:checked + .toggle {
+  background-color: #595;
+}
+
+input:focus + .toggle {
+  box-shadow: 0 0 1px #595;
+}
+
+input:checked + .toggle:before {
+  -webkit-transform: translateX(15px);
+  -ms-transform: translateX(15px);
+  transform: translateX(15px);
+}
+
 .buttons-block input {
     flex-basis: 50%;
 }
@@ -72,6 +86,7 @@ input:focus, select:focus {
     margin: 4px 0;
     display: flex;
     flex-direction: row;
+    justify-content: space-between;
 }
 
 .control-block input, .control-block select {
@@ -87,7 +102,7 @@ input:focus, select:focus {
     text-align: right;
 }
 
-.control-block label {
+.control-block .label {
     flex-basis: fit-content;
 }
 
@@ -143,6 +158,45 @@ input:focus, select:focus {
     cursor: pointer;
 }
 
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 16px;
+}
+
+.switch input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle{
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.toggle:before {
+    position: absolute;
+    content: "";
+    height: 12px;
+    width: 12px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%;
+}
+
 #graph-handle {
     position: absolute;
     top: 10px;
@@ -158,4 +212,5 @@ input:focus, select:focus {
     background-color: #333;
     padding: 30px 10px 15px 10px;
 }
+
 

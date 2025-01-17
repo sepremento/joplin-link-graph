@@ -23,11 +23,12 @@ function poll(msg) {
         });
 }
 
-function requestUpdate(query, degree) {
+function requestUpdate(query, degree, showTags) {
     webviewApi.postMessage({
         name: "request_update",
         query: query,
-        degree: degree
+        degree: degree,
+        showTags: showTags
     }).then((event) => {
             if (event.data) {
                 graph.updateGraph(event.data);
@@ -89,10 +90,10 @@ function createGraph() {
         const depth = node.distanceToCurrentNode
             ? node.distanceToCurrentNode
             : 0;
-        const r = Math.max(10 - 3 * depth, 4);
-        const maxLabelWidth = 150;
+        let r = Math.max(10 - 3 * depth, 4);
+        const maxLabelWidth = 180;
         context.beginPath();
-        context.globalAlpha = 0.8;
+        context.globalAlpha = 1;
         context.strokeStyle = "#999";
         context.fillStyle = "#999";
         context.lineWidth = 1.0;
@@ -101,7 +102,6 @@ function createGraph() {
         }
 
         if (node.focused) {
-            context.globalAlpha = 1;
             context.strokeStyle = "#595";
             context.fillStyle = "#595";
         }
@@ -111,6 +111,13 @@ function createGraph() {
             context.fillStyle = "#A0A0A0";
             context.strokeStyle = "#A0A0A0";
         }
+
+        if (node.is_tag) {
+            r = 12;
+            context.fillStyle = "#5A325A";
+            context.strokeStyle = "#5A325A";
+        }
+
         context.moveTo(node.x + r, node.y);
         context.arc(node.x, node.y, r, 0, 2 * Math.PI);
         context.fill();
@@ -132,6 +139,8 @@ function createGraph() {
         if (link.faded) {
             context.globalAlpha = 0.05;
         }
+
+        if (transform.k <= 0.7 && !(link.focused || link.faded)) return;
 
         const x1 = link.source.x,
         x2 = link.target.x,
@@ -177,7 +186,6 @@ function createGraph() {
         context.scale(transform.k, transform.k);
 
         graphLinks.forEach(drawLink);
-
 
         const postponedNodes = [];
         for (const d of graphNodes) {
@@ -272,11 +280,13 @@ function createGraph() {
             .on("tick", draw);
     };
 
-    function openNote(event) {
+    function navigateTo(event) {
         const node = findNode(event, graphNodes);
+        if (!node) return;
+        const command = node.is_tag ? "open_tag" : "open_note";
         if (event.ctrlKey) {
             webviewApi.postMessage({
-                name: "open_note",
+                name: command,
                 id: node.id
             });
         }
@@ -286,20 +296,20 @@ function createGraph() {
         var text = d.title, lineHeight = 16,
         words = text.split(/\s+/).reverse(),
         word, line = [], len, N = 0,
-        offset = (2 * r) + 4;
+        offset = r;
 
         while (word = words.pop()) {
             line.push(word);
             len = context.measureText(line.join(" ")).width;
             if (len > width) {
                 line.pop();
-                context.fillText(line.join(" "), d.x - width / 2, d.y + offset + N * lineHeight);
+                context.fillText(line.join(" "), d.x - width / 2, d.y + offset + (N+1) * lineHeight);
                 N += 1;
                 line = [word]
                 len = context.measureText(line.join(" ")).width;
             }
         }
-        context.fillText(line.join(" "), d.x - len / 2 , d.y + offset + N * lineHeight);
+        context.fillText(line.join(" "), d.x - len / 2 , d.y + offset + (N+1) * lineHeight);
     }
 
     function zoomed(event) {
@@ -325,7 +335,7 @@ function createGraph() {
 
             d3.select(canvas)
                 .on('mousemove', highlightRegion)
-                .on('click', openNote)
+                .on('click', navigateTo)
                 .call(d3.drag()
                     .subject(event => findNode(event, graphNodes))
                     .on("start", dragstarted)

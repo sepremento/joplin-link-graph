@@ -11,8 +11,7 @@ export interface Node {
   title: string;
   parent_id: string;
   folder: string;
-  // focused: boolean;
-  // totalLinks: number;
+  is_tag: boolean;
   distanceToCurrentNode?: number;
 }
 
@@ -24,7 +23,6 @@ export interface GraphData {
 }
 
 export interface GraphSettings {
-  // isSelectionBased: boolean;  // maxDegree > 0
   chargeStrength: number;
   centerStrength: number;
   collideRadius: number;

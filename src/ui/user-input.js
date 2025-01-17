@@ -10,6 +10,7 @@ const collideRadiusInput = document.getElementById("nocollide-radius-input");
 const radiusScaleInput = document.getElementById("radius-scale-input");
 const linkStrenthInput = document.getElementById("link-strength-input");
 const linkDistanceInput = document.getElementById("link-distance-input");
+const showTagsSwitch = document.getElementById("show-tags-switch");
 const maxDistInput = document.getElementById("distance-slider");
 const temperatureInput = document.getElementById("temperature-slider");
 
@@ -74,6 +75,7 @@ export function setupGraphHandle(settings) {
     linkDistanceInput.value = settings.linkDistance;
     linkStrenthInput.value = settings.linkStrength;
     temperatureInput.value = settings.alpha;
+    showTagsSwitch.checked = settings.showTags;
     maxDistInput.value = settings.maxDepth;
     distOutput.innerHTML = settings.maxDepth;
 }
@@ -103,8 +105,11 @@ export function initFront(initialValues, setSetting, poll) {
     temperatureInput.addEventListener("change", () => {
         setSetting("ALPHA", temperatureInput.valueAsNumber);
     });
+    showTagsSwitch.addEventListener("change", () => {
+        poll(queryInput.value, maxDistInput.value, showTagsSwitch.checked);
+    });
     maxDistInput.addEventListener("change", () => {
-        poll(queryInput.value, maxDistInput.value);
+        poll(queryInput.value, maxDistInput.value, showTagsSwitch.checked);
     });
     maxDistInput.addEventListener("input", () => {
         distOutput.value = maxDistInput.value;
@@ -112,7 +117,7 @@ export function initFront(initialValues, setSetting, poll) {
     queryInput.addEventListener("keypress", (ev) => {
         if (ev.key === 'Enter') {
             ev.preventDefault();
-            poll(queryInput.value, maxDistInput.value);
+            poll(queryInput.value, maxDistInput.value, showTagsSwitch.checked);
         }
     });
 }

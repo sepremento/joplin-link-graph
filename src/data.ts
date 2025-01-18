@@ -1,4 +1,6 @@
 import joplin from "api";
+import { JoplinNote } from './model'
+import { filter } from "webpack.config";
 
 
 export interface Notebook {
@@ -90,19 +92,11 @@ export interface Node {
     distanceToCurrentNote?: number;
 }
 
-
-interface JoplinNote {
-    id: string;
-    parent_id: string;
-    title: string;
-    body: string;
-}
-
-
 // Fetch notes
 export async function getNodes(
     selectedNotes: Array<string>,
     maxDegree: number,
+    filterQuery: string
 ): Promise<Map<string, Node>> {
 
     const maxNotes = await joplin.settings.value("MAX_NODES");
@@ -110,6 +104,8 @@ export async function getNodes(
 
     const shouldFilterChildren = await joplin.settings.value("SETTING_FILTER_CHILD_NOTEBOOKS");
     const isIncludeFilter = (await joplin.settings.value("FILTER_IS_INCLUDE_FILTER")) === "include" ? true : false;
+
+    const noteIdsToExclude: Set<string> = new Set();
 
     const notebooks = await getNotebooks();
 
@@ -127,15 +123,21 @@ export async function getNodes(
         filteredNotebooks = notebooks;
     }
 
+    if (filterQuery) {
+        const searchResult: Array<JoplinNote> = await executeSearch(filterQuery);
+        for (let n of searchResult) noteIdsToExclude.add(n.id);
+    }
+
     if (maxDegree > 0) {
         nodes = await getLinkedNodes(
             selectedNotes,
             maxDegree,
+            noteIdsToExclude,
             notebooks,
             filteredNotebooks,
         );
     } else {
-        nodes = await getAllNodes(maxNotes, notebooks);
+        nodes = await getAllNodes(maxNotes, notebooks, noteIdsToExclude);
     }
 
     if (notebooksToFilter[0] !== "" || notebooksToFilter.length > 1) {
@@ -165,7 +167,8 @@ export async function filterNotesByNotebookName(
 // Fetches every note.
 async function getAllNodes(
     maxNotes: number,
-    notebooks: Map<string, Notebook>
+    notebooks: Map<string, Notebook>,
+    noteIdsToExclude: Set<string>,
 ): Promise<Map<string, Node>> {
     var allNotes = new Array<JoplinNote>();
     var page_num = 1;
@@ -186,6 +189,8 @@ async function getAllNodes(
     const noteMap = new Map<string, Node>();
 
     for (const joplinNote of allNotes) {
+        if (noteIdsToExclude.has(joplinNote.id)) continue;
+
         const note = buildNodeFromNote(joplinNote);
         note.folder = notebooks.get(note.parent_id).title;
         noteMap.set(note.id, note);
@@ -214,6 +219,7 @@ function buildNodeFromNote(joplinNote: JoplinNote): Node {
 async function getLinkedNodes(
     source_ids: Array<string>,
     maxDegree: number,
+    noteIdsToExclude: Set<string>,
     notebooks: Map<string, Notebook>,
     filteredNotebooks: Map<string, Notebook>,
 ): Promise<Map<string, Node>> {
@@ -231,6 +237,10 @@ async function getLinkedNodes(
         // Traverse a new batch of pending note ids, storing the note data in
         // the resulting map, and stashing the newly found linked notes for the
         // next iteration.
+        
+        // applyFilters
+        pending = pending.filter(n => !noteIdsToExclude.has(n));
+        
         const joplinNotes = await getNoteArray(pending);
         for (const pendingNoteId of pending) {
             visited.add(pendingNoteId)
@@ -369,6 +379,25 @@ export async function buildTagNodes(nodes: Map<string, Node>): Promise<Map<strin
     return tagNodes;
 }
 
+export async function executeSearch(query: string): Promise<Array<JoplinNote>> {
+    let page = 1;
+    const maxNotes = await joplin.settings.value("MAX_NODES")
+    const foundNotes = new Array();
+
+    do {
+        var notes = await joplin.data.get(['search'], {
+            query: query,
+            fields: ["id", "parent_id", "title", "body"],
+            limit: maxNotes < 100 ? maxNotes : 100,
+            page: page
+        });
+
+        foundNotes.push(...notes.items);
+        page++;
+    } while(notes.has_more && foundNotes.length < maxNotes);
+
+    return foundNotes;
+}
 
 async function getNoteArray(ids: string[]): Promise<Array<JoplinNote>> {
     var promises = ids.map((id) =>

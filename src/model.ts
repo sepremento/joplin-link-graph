@@ -1,3 +1,10 @@
+export interface JoplinNote {
+    id: string;
+    parent_id: string;
+    title: string;
+    body: string;
+}
+
 export interface Edge {
   source: string;
   target: string;
@@ -13,6 +20,12 @@ export interface Node {
   folder: string;
   is_tag: boolean;
   distanceToCurrentNode?: number;
+}
+
+export interface DataSpec {
+    degree: number;
+    spanningTree?: string[];
+    filterQuery?: string;
 }
 
 export interface GraphData {

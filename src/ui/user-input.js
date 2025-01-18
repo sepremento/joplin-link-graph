@@ -2,6 +2,7 @@ const graphContainer = document.getElementById('container');
 const draggables = document.querySelectorAll('div.drag-handle');
 
 const queryInput = document.getElementById("query-input");
+const filterInput = document.getElementById("filter-input");
 const distOutput = document.getElementById("distance-output");
 
 const chargeStrengthInput = document.getElementById("charge-strength-input");
@@ -80,7 +81,7 @@ export function setupGraphHandle(settings) {
     distOutput.innerHTML = settings.maxDepth;
 }
 
-export function initFront(initialValues, setSetting, poll) {
+export function initFront(initialValues, setSetting, requestUpdate) {
     chromeRangeInputFix();
     setupGraphHandle(initialValues);
 
@@ -106,18 +107,44 @@ export function initFront(initialValues, setSetting, poll) {
         setSetting("ALPHA", temperatureInput.valueAsNumber);
     });
     showTagsSwitch.addEventListener("change", () => {
-        poll(queryInput.value, maxDistInput.value, showTagsSwitch.checked);
+        requestUpdate({
+            query: queryInput.value,
+            filter: filterInput.value,
+            degree: maxDistInput.value,
+            showTags: showTagsSwitch.checked
+        });
     });
     maxDistInput.addEventListener("change", () => {
-        poll(queryInput.value, maxDistInput.value, showTagsSwitch.checked);
-    });
-    maxDistInput.addEventListener("input", () => {
-        distOutput.value = maxDistInput.value;
+        requestUpdate({
+            query: queryInput.value,
+            filter: filterInput.value,
+            degree: maxDistInput.value,
+            showTags: showTagsSwitch.checked
+        });
     });
     queryInput.addEventListener("keypress", (ev) => {
         if (ev.key === 'Enter') {
             ev.preventDefault();
-            poll(queryInput.value, maxDistInput.value, showTagsSwitch.checked);
+            requestUpdate({
+                query: queryInput.value,
+                filter: filterInput.value,
+                degree: maxDistInput.value,
+                showTags: showTagsSwitch.checked
+            });
         }
+    });
+    filterInput.addEventListener("keypress", (ev) => {
+        if (ev.key === 'Enter') {
+            ev.preventDefault();
+            requestUpdate({
+                query: queryInput.value,
+                filter: filterInput.value,
+                degree: maxDistInput.value,
+                showTags: showTagsSwitch.checked
+            });
+        }
+    });
+    maxDistInput.addEventListener("input", () => {
+        distOutput.value = maxDistInput.value;
     });
 }

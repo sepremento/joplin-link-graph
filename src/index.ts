@@ -1,9 +1,10 @@
 import joplin from "api";
 import * as joplinData from "./data";
 import { registerSettings } from "./settings";
-import { Edge, Node, GraphData, GraphSettings } from "./model";
+import { Edge, Node, JoplinNote, DataSpec, GraphData, GraphSettings } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
 import { hasUncaughtExceptionCaptureCallback } from "process";
+import Joplin from "api/Joplin";
 var deepEqual = require("fast-deep-equal");
 
 let data: GraphData;
@@ -11,6 +12,7 @@ let pollCb: any;
 let modelChanges = [];
 var prevNoteLinks = [];
 var prevNoteTitle: string;
+var prevQuery: string;
 var syncOngoing = false;
 
 
@@ -63,19 +65,23 @@ async function collectGraphSettings() {
     }
 }
 
-async function fetchData(maxDegree, fetchForNotes?) {
+async function fetchData(spec: DataSpec) {
     const fetchForNoteIds: Array<string> = [];
 
-    if (typeof(fetchForNotes) === "undefined") {
+    if (typeof(spec.spanningTree) === "undefined") {
         const selectedNoteIds = await joplin.workspace.selectedNoteIds();
         fetchForNoteIds.push(...selectedNoteIds);
     } else {
-        for (const note of fetchForNotes) {
-            fetchForNoteIds.push(note.id); 
+        for (const noteId of spec.spanningTree) {
+            fetchForNoteIds.push(noteId); 
         }
     }
 
-    const nodes = await joplinData.getNodes(fetchForNoteIds, maxDegree);
+    const nodes = await joplinData.getNodes(
+        fetchForNoteIds,
+        spec.degree,
+        spec.filterQuery
+    );
 
     const data: GraphData = {
         nodes: [],
@@ -132,9 +138,13 @@ async function drawPanel(panel) {
 <div id="container">
 <div id="graph-handle">
 <div class="drag-handle"></div>
-<div id="cb1" class="control-block">
+<div class="control-block">
 <label class="label" for="query-input">Query</label>
 <input id="query-input" type="string"></input>
+</div>
+<div class="control-block">
+<label class="label" for="filter-input">Filter</label>
+<input id="filter-input" type="string"></input>
 </div>
 <div class="control-block">
 <label class="label" for="distance-slider">Max. distance</label>
@@ -251,27 +261,6 @@ async function processWebviewMessage(message) {
     }
 }
 
-async function executeSearchQuery(query, degree): Promise<GraphData> {
-    let page = 1;
-    const maxNotes = await joplin.settings.value("MAX_NODES")
-    const maxDegree = Number(degree);
-    const foundNotes = new Array();
-
-    do {
-        var notes = await joplin.data.get(['search'], {
-            query: query,
-            fields: ["id", "parent_id", "title", "body"],
-            limit: maxNotes < 100 ? maxNotes : 100,
-            page: page
-        });
-
-        foundNotes.push(...notes.items);
-        page++;
-    } while(notes.has_more && foundNotes.length < maxNotes);
-
-    return fetchData(maxDegree, foundNotes);
-}
-
 async function updateUI(eventName: string, supplement?) {
     //during sync do nothing;
     if (syncOngoing) { return; }
@@ -284,7 +273,7 @@ async function updateUI(eventName: string, supplement?) {
     if (!data || eventName === "initialCall") {
         const selectedNote = await joplin.workspace.selectedNote();
 
-        data = await fetchData(maxDegree);
+        data = await fetchData({degree: maxDegree});
         data.graphSettings = graphSettings;
 
         eventName = "initialGraph";
@@ -310,7 +299,7 @@ async function updateUI(eventName: string, supplement?) {
 
             prevNoteLinks = noteLinks;
             eventName += ":links";
-            data = await fetchData(maxDegree);
+            data = await fetchData({degree: maxDegree});
 
         } else {
 
@@ -337,25 +326,35 @@ async function updateUI(eventName: string, supplement?) {
         if (maxDegree == 0) {
             // but if selected note was not in the previous data then refetch
             if (!data.spanningTree.every(n => graphNoteIds.includes(n))) {
-                data = await fetchData(maxDegree, data.spanningTree);
+                data = await fetchData({
+                    degree: maxDegree, 
+                    spanningTree: data.spanningTree
+                });
             }
         } else {
-            data = await fetchData(maxDegree);
+            data = await fetchData({degree: maxDegree});
             data.graphSettings = graphSettings;
         }
     } else if (eventName === "processRequestedUpdate") {
-        const query = supplement.query;
+        let queryResult: string[] = undefined;
+        const query = supplement.query.trim();
         const degree = supplement.degree;
         const showTags = supplement.showTags;
         
-        joplin.settings.setValue("MAX_TREE_DEPTH", degree);
-        joplin.settings.setValue("SHOW_TAGS", showTags);
+        await joplin.settings.setValue("MAX_TREE_DEPTH", degree);
+        await joplin.settings.setValue("SHOW_TAGS", showTags);
 
         if (query) {
-            data = await executeSearchQuery(query, degree)
-        } else {
-            data = await fetchData(degree);
-        }
+            const searchResult = await joplinData.executeSearch(query);
+            queryResult = searchResult.map(n => n.id);
+        } 
+
+        data = await fetchData({
+            degree: degree,
+            spanningTree: queryResult,
+            filterQuery: supplement.filter
+        });
+
     } else if (eventName === "pushSettings") {
         data.graphSettings = graphSettings;
     }

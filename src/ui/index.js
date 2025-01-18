@@ -23,12 +23,10 @@ function poll(msg) {
         });
 }
 
-function requestUpdate(query, degree, showTags) {
+function requestUpdate(request) {
     webviewApi.postMessage({
         name: "request_update",
-        query: query,
-        degree: degree,
-        showTags: showTags
+        ...request
     }).then((event) => {
             if (event.data) {
                 graph.updateGraph(event.data);

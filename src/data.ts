@@ -1,6 +1,5 @@
 import joplin from "api";
 import { JoplinNote } from './model'
-import { filter } from "webpack.config";
 
 
 export interface Notebook {
@@ -170,6 +169,8 @@ async function getAllNodes(
     notebooks: Map<string, Notebook>,
     noteIdsToExclude: Set<string>,
 ): Promise<Map<string, Node>> {
+    const showTags = await joplin.settings.value('SHOW_TAGS');
+
     var allNotes = new Array<JoplinNote>();
     var page_num = 1;
 
@@ -186,16 +187,24 @@ async function getAllNodes(
         page_num++;
     } while (notes.has_more && allNotes.length < maxNotes);
 
-    const noteMap = new Map<string, Node>();
+    const nodeMap = new Map<string, Node>();
 
     for (const joplinNote of allNotes) {
         if (noteIdsToExclude.has(joplinNote.id)) continue;
 
         const note = buildNodeFromNote(joplinNote);
         note.folder = notebooks.get(note.parent_id).title;
-        noteMap.set(note.id, note);
+        nodeMap.set(note.id, note);
     }
-    return noteMap;
+
+    if (showTags) {
+        const tagNodes = await buildTagNodes(nodeMap, true);
+
+        for (let [id, tag] of tagNodes.entries()) {
+            if (!nodeMap.has(id)) nodeMap.set(id, tag);
+        }
+    }
+    return nodeMap;
 }
 
 
@@ -239,8 +248,8 @@ async function getLinkedNodes(
         // next iteration.
         
         // applyFilters
-        pending = pending.filter(n => !noteIdsToExclude.has(n));
-        
+        if (degree !== 0) pending = pending.filter(n => !noteIdsToExclude.has(n));
+
         const joplinNotes = await getNoteArray(pending);
         for (const pendingNoteId of pending) {
             visited.add(pendingNoteId)
@@ -251,9 +260,11 @@ async function getLinkedNodes(
             const backlinksPromises = joplinNotes.map(n => getAllBacklinksForNote(n.id));
             let backlinks = await Promise.all(backlinksPromises.map((p) => p.catch((e) => e)));
 
-            for (let obj of backlinks) {
-                const filtered = obj.backlinks.filter(link => filteredNotebooks.has(link.parent_id));
-                backlinksMap.set(obj.id, filtered.map(({ id, }) => id));
+            for (let lnk of backlinks) {
+                const filtered = lnk.backlinks.filter(link => 
+                    filteredNotebooks.has(link.parent_id) && !noteIdsToExclude.has(link.id)
+                );
+                backlinksMap.set(lnk.id, filtered.map(({ id, }) => id));
             }
         }
 
@@ -285,7 +296,7 @@ async function getLinkedNodes(
         }
 
         if (showTags) {
-            const tagNodes = await buildTagNodes(nodeMap);
+            const tagNodes = await buildTagNodes(nodeMap, false);
 
             for (let [id, tag] of tagNodes.entries()) {
                 if (!nodeMap.has(id)) nodeMap.set(id, tag);
@@ -306,53 +317,56 @@ async function getLinkedNodes(
 }
 
 
-async function filterBacklinks(
-    backlinks: Array<string>,
-    filteredNotebooks: Map<string, Notebook>,
-): Promise<Array<string>> {
-
-    const joplinNotes = await getNoteArray(backlinks);
-
-    const filteredNotebookIds = [];
-    for (const [id, n] of filteredNotebooks) {
-        filteredNotebookIds.push(id)
-    }
-
-    const filteredBacklinks = [];
-    for (const note of joplinNotes) {
-        if (filteredNotebookIds.includes(note.parent_id)) {
-            filteredBacklinks.push(note.id);
-        }
-    }
-
-    return filteredBacklinks;
+interface Tag {
+    id: string,
+    title: string
 }
 
-export async function buildTagNodes(nodes: Map<string, Node>): Promise<Map<string, Node>> {
+
+interface JoplinDataResponse {
+    items: any,
+    has_more?: boolean
+}
+
+
+export async function buildTagNodes(nodes: Map<string, Node>, all: boolean): Promise<Map<string, Node>> {
     const tagNodes = new Map();
 
     // keep only nodes that are built from notes;
     const notesNodes = new Map(Array.from(nodes).filter(([_, v]) => !v.is_tag))
     const noteIdsArr = Array.from(notesNodes.keys());
-
-    // collect all tags present in given notes
-    const tagsPromises = noteIdsArr.map((id) =>
-        joplin.data.get(["notes", id, "tags"], {
-            fields: ["id", "title"]
-        }));
-    const tagsResult = await Promise.all(tagsPromises.map((p) => p.catch((e) => e)));
-    
-    const uniqueTags = [];
+    let uniqueTags: Array<Tag> = [];
     const uniqueTagIds = new Set();
 
-    for (let res of tagsResult) {
-        const tags = res.items;
-        for (let tag of tags) {
-            if (!uniqueTagIds.has(tag.id)) {
-                uniqueTagIds.add(tag.id);
-                uniqueTags.push(tag)
+    if (all) {
+        // if building Global View
+        let pageNum = 1;
+        let response: JoplinDataResponse;
+        do {
+            response = await joplin.data.get(["tags"], {
+                fields: ["id", "title"],
+                page: pageNum++,
+            });
+            uniqueTags.push(...response.items);
+        } while (response.has_more);
+
+    } else {
+        // collect all tags present in given notes
+        const tagsPromises = noteIdsArr.map((id) =>
+            joplin.data.get(["notes", id, "tags"], {
+                fields: ["id", "title"]
+            }));
+        const tagsResult = await Promise.all(tagsPromises.map((p) => p.catch((e) => e)));
+        for (let res of tagsResult) {
+            const tags = res.items;
+            for (let tag of tags) {
+                if (!uniqueTagIds.has(tag.id)) {
+                    uniqueTagIds.add(tag.id);
+                    uniqueTags.push(tag)
+                }
             }
         }
+
     }
 
     // collect all notes associated with deduced tags
@@ -367,6 +381,8 @@ export async function buildTagNodes(nodes: Map<string, Node>): Promise<Map<strin
         const title = uniqueTags[i].title;
         const links = notesForTags[i].items.map(({ id }) => id);
 
+        if (!links) continue;
+
         if (!tagNodes.has(tagId)) tagNodes.set(tagId, {
             id: tagId,
             title: title,
@@ -378,6 +394,7 @@ export async function buildTagNodes(nodes: Map<string, Node>): Promise<Map<strin
     }
     return tagNodes;
 }
+
 
 export async function executeSearch(query: string): Promise<Array<JoplinNote>> {
     let page = 1;
@@ -398,6 +415,7 @@ export async function executeSearch(query: string): Promise<Array<JoplinNote>> {
 
     return foundNotes;
 }
+
 
 async function getNoteArray(ids: string[]): Promise<Array<JoplinNote>> {
     var promises = ids.map((id) =>

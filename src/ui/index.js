@@ -316,7 +316,11 @@ function createGraph() {
 
     return Object.assign(canvas, {
 
+        graphInitialized: false,
+
         init(data) {
+
+            if (this.graphInitialized) return;
 
             graphNodes = data.nodes;
             graphLinks = data.edges;
@@ -341,6 +345,8 @@ function createGraph() {
                 .call(d3.zoom()
                     .scaleExtent([1/10, 8])
                     .on('zoom', zoomed));
+
+            this.graphInitialized = true;
         },
 
         updateGraph(data) {

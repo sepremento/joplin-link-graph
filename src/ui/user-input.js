@@ -106,20 +106,22 @@ export function initFront(initialValues, setSetting, requestUpdate) {
     temperatureInput.addEventListener("change", () => {
         setSetting("ALPHA", temperatureInput.valueAsNumber);
     });
-    showTagsSwitch.addEventListener("change", () => {
+    showTagsSwitch.addEventListener("change", (ev) => {
         requestUpdate({
             query: queryInput.value,
             filter: filterInput.value,
             degree: maxDistInput.value,
-            showTags: showTagsSwitch.checked
+            showTags: showTagsSwitch.checked,
+            source: "showTagsSwitch"
         });
     });
-    maxDistInput.addEventListener("change", () => {
+    maxDistInput.addEventListener("change", (ev) => {
         requestUpdate({
             query: queryInput.value,
             filter: filterInput.value,
             degree: maxDistInput.value,
-            showTags: showTagsSwitch.checked
+            showTags: showTagsSwitch.checked,
+            source: "maxDistInput"
         });
     });
     queryInput.addEventListener("keypress", (ev) => {
@@ -129,7 +131,8 @@ export function initFront(initialValues, setSetting, requestUpdate) {
                 query: queryInput.value,
                 filter: filterInput.value,
                 degree: maxDistInput.value,
-                showTags: showTagsSwitch.checked
+                showTags: showTagsSwitch.checked,
+                source: "queryInput"
             });
         }
     });
@@ -140,7 +143,8 @@ export function initFront(initialValues, setSetting, requestUpdate) {
                 query: queryInput.value,
                 filter: filterInput.value,
                 degree: maxDistInput.value,
-                showTags: showTagsSwitch.checked
+                showTags: showTagsSwitch.checked,
+                source: "filterInput"
             });
         }
     });

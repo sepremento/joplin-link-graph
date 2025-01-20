@@ -350,6 +350,8 @@ function createGraph() {
         },
 
         updateGraph(data) {
+            simulation.stop();
+
             graphNodes = data.nodes.map(d => {
                 if (!graphNodesMap.has(d.id)) graphNodesMap.set(d.id, d);
                 return Object.assign(graphNodesMap.get(d.id) || {}, d);

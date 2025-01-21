@@ -56,6 +56,22 @@ export async function registerSettings() {
       description:
         "Filters notebooks that are children of the notebooks listed above.",
     },
+    QUERY: {
+      value: "",
+      type: SettingItemType.String,
+      section: sectionName,
+      public: false,
+      label: "User query",
+      description: "",
+    },
+    FILTER: {
+      value: "",
+      type: SettingItemType.String,
+      section: sectionName,
+      public: false,
+      label: "User set filters",
+      description: "",
+    },
     MAX_TREE_DEPTH: {
       value: DEFAULT_MAX_DEGREE,
       type: SettingItemType.Int,

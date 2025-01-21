@@ -69,6 +69,12 @@ function chromeRangeInputFix() {
 }
 
 export function setupGraphHandle(settings) {
+    queryInput.value = settings.query;
+    filterInput.value = settings.filter;
+    showTagsSwitch.checked = settings.showTags;
+    maxDistInput.value = settings.maxDepth;
+    distOutput.innerHTML = settings.maxDepth;
+
     chargeStrengthInput.value = settings.chargeStrength;
     centerStrenthInput.value = settings.centerStrength;
     collideRadiusInput.value = settings.collideRadius;
@@ -76,12 +82,9 @@ export function setupGraphHandle(settings) {
     linkDistanceInput.value = settings.linkDistance;
     linkStrenthInput.value = settings.linkStrength;
     temperatureInput.value = settings.alpha;
-    showTagsSwitch.checked = settings.showTags;
-    maxDistInput.value = settings.maxDepth;
-    distOutput.innerHTML = settings.maxDepth;
 }
 
-export function initFront(initialValues, setSetting, requestUpdate) {
+export function initFront(initialValues, setSetting) {
     chromeRangeInputFix();
     setupGraphHandle(initialValues);
 
@@ -106,46 +109,22 @@ export function initFront(initialValues, setSetting, requestUpdate) {
     temperatureInput.addEventListener("change", () => {
         setSetting("ALPHA", temperatureInput.valueAsNumber);
     });
-    showTagsSwitch.addEventListener("change", (ev) => {
-        requestUpdate({
-            query: queryInput.value,
-            filter: filterInput.value,
-            degree: maxDistInput.value,
-            showTags: showTagsSwitch.checked,
-            source: "showTagsSwitch"
-        });
+    showTagsSwitch.addEventListener("change", () => {
+        setSetting("SHOW_TAGS", showTagsSwitch.checked);
     });
-    maxDistInput.addEventListener("change", (ev) => {
-        requestUpdate({
-            query: queryInput.value,
-            filter: filterInput.value,
-            degree: maxDistInput.value,
-            showTags: showTagsSwitch.checked,
-            source: "maxDistInput"
-        });
+    maxDistInput.addEventListener("change", () => {
+        setSetting("MAX_TREE_DEPTH", maxDistInput.value);
     });
     queryInput.addEventListener("keypress", (ev) => {
         if (ev.key === 'Enter') {
             ev.preventDefault();
-            requestUpdate({
-                query: queryInput.value,
-                filter: filterInput.value,
-                degree: maxDistInput.value,
-                showTags: showTagsSwitch.checked,
-                source: "queryInput"
-            });
+            setSetting("QUERY", queryInput.value);
         }
     });
     filterInput.addEventListener("keypress", (ev) => {
         if (ev.key === 'Enter') {
             ev.preventDefault();
-            requestUpdate({
-                query: queryInput.value,
-                filter: filterInput.value,
-                degree: maxDistInput.value,
-                showTags: showTagsSwitch.checked,
-                source: "filterInput"
-            });
+            setSetting("FILTER", filterInput.value);
         }
     });
     maxDistInput.addEventListener("input", () => {

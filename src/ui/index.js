@@ -6,7 +6,6 @@ var height = window.innerHeight;
 const centerX = width / 2;
 const centerY = height / 2;
 
-
 // first functions are for communication with the plugin
 
 function poll(msg) {
@@ -20,18 +19,6 @@ function poll(msg) {
             if (resp.name === "noteChange:links" || resp.name === "noteSelectionChange")
                 graph.updateGraph(resp.data);
             poll();
-        });
-}
-
-function requestUpdate(request) {
-    webviewApi.postMessage({
-        name: "request_update",
-        ...request
-    }).then((event) => {
-            if (event.data) {
-                graph.updateGraph(event.data);
-                poll();
-            }
         });
 }
 
@@ -327,7 +314,7 @@ function createGraph() {
             graphSettings = data.graphSettings;
             spanningTree = data.spanningTree;
 
-            userInput.initFront(graphSettings, setSetting, requestUpdate);
+            userInput.initFront(graphSettings, setSetting);
 
             for (let node of graphNodes) graphNodesMap.set(node.id, node);
 

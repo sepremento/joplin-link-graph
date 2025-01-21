@@ -1,10 +1,8 @@
 import joplin from "api";
 import * as joplinData from "./data";
 import { registerSettings } from "./settings";
-import { Edge, Node, JoplinNote, DataSpec, GraphData, GraphSettings } from "./model";
+import { DataSpec, GraphData } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
-import { hasUncaughtExceptionCaptureCallback } from "process";
-import Joplin from "api/Joplin";
 var deepEqual = require("fast-deep-equal");
 
 let data: GraphData;
@@ -12,8 +10,9 @@ let pollCb: any;
 let modelChanges = [];
 var prevNoteLinks = [];
 var prevNoteTitle: string;
-var prevQuery: string;
+var prevSettings = {};
 var syncOngoing = false;
+const USER_INPUT = ["QUERY", "FILTER", "MAX_TREE_DEPTH", "SHOW_TAGS"]
 
 
 joplin.plugins.register({
@@ -46,22 +45,26 @@ joplin.plugins.register({
             updateUI("syncComplete");
         });
         await joplin.settings.onChange(async (ev) => {
-            updateUI("pushSettings", ev);
+            if (!USER_INPUT.includes(ev.keys[0]))
+                updateUI("pushSettings");
         });
     },
 });
 
 async function collectGraphSettings() {
     return {
+        query: await joplin.settings.value('QUERY'),
+        filter: await joplin.settings.value('FILTER'),
         maxDepth: await joplin.settings.value('MAX_TREE_DEPTH'),
+        showTags: await joplin.settings.value('SHOW_TAGS'),
+
+        alpha: await joplin.settings.value('ALPHA'),
         chargeStrength: await joplin.settings.value('CHARGE_STRENGTH'),
         centerStrength: await joplin.settings.value('CENTER_STRENGTH'),
         collideRadius: await joplin.settings.value('COLLIDE_RADIUS'),
         radiusScale: await joplin.settings.value('RADIUS_SCALE'),
         linkDistance: await joplin.settings.value('LINK_DISTANCE'),
         linkStrength: await joplin.settings.value('LINK_STRENGTH'),
-        showTags: await joplin.settings.value('SHOW_TAGS'),
-        alpha: await joplin.settings.value('ALPHA'),
     }
 }
 
@@ -130,7 +133,7 @@ function notifyUI() {
     }
 }
 
-async function drawPanel(panel) {
+async function drawPanel(panel: any) {
     await joplin.views.panels.setHtml(
         panel,
         `
@@ -207,7 +210,7 @@ async function drawPanel(panel) {
     );
 }
 
-async function registerShowHideCommand(graphPanel) {
+async function registerShowHideCommand(graphPanel: any) {
     // Register Show/Hide Graph Command and also create a toolbar button for this
     // command and a menu item.
 
@@ -237,31 +240,32 @@ async function registerShowHideCommand(graphPanel) {
     );
 }
 
-async function processWebviewMessage(message) {
+async function processWebviewMessage(message: any) {
     let promise: Promise<Object>;
     switch (message.name) {
         case "poll":
             promise = new Promise((resolve) => { pollCb = resolve; });
             if (message.msg === "init") {
-                updateUI("initialCall")
+                updateUI("initialCall");
             } else {
                 notifyUI();
-            };
-            return promise;
-        case "request_update":
-            promise = new Promise((resolve) => { pollCb = resolve; });
-            updateUI("processRequestedUpdate", message);
+            }
             return promise;
         case "open_note":
-            return joplin.commands.execute("openNote", message.id);
+            return await joplin.commands.execute("openNote", message.id);
         case "open_tag":
-            return joplin.commands.execute("openTag", message.id);
+            return await joplin.commands.execute("openTag", message.id);
         case "set_setting":
+            if (USER_INPUT.includes(message.key)) {
+                updateUI("noteSelectionChange");
+            } else {
+                updateUI("pushSettings");
+            }
             return await joplin.settings.setValue(message.key, message.value);
     }
 }
 
-async function updateUI(eventName: string, supplement?) {
+async function updateUI(eventName: string) {
     //during sync do nothing;
     if (syncOngoing) { return; }
 
@@ -275,6 +279,7 @@ async function updateUI(eventName: string, supplement?) {
 
         data = await fetchData({degree: maxDegree});
         data.graphSettings = graphSettings;
+        prevSettings = Object.assign({}, graphSettings);
 
         eventName = "initialGraph";
         prevNoteTitle = selectedNote.title;
@@ -307,8 +312,16 @@ async function updateUI(eventName: string, supplement?) {
         }
 
     } else if (eventName === "noteSelectionChange") {
-        const selectedNoteIds = await joplin.workspace.selectedNoteIds();
-        const graphNoteIds = data.nodes.map(note => note.id);
+        let selectedNoteIds: string[];
+        const query = graphSettings.query.trim()
+
+        if (query) {
+            const searchResult = await joplinData.executeSearch(query);
+            selectedNoteIds = searchResult.map(n => n.id);
+
+        } else {
+            selectedNoteIds = await joplin.workspace.selectedNoteIds();
+        }
 
         if (selectedNoteIds.length === 1) {
             const newSelectedNote = await joplin.workspace.selectedNote();
@@ -322,41 +335,18 @@ async function updateUI(eventName: string, supplement?) {
             prevNoteLinks = undefined;
         }
 
-        // if draw all notes already then most of the time no need to refetch;
-        if (maxDegree == 0) {
-            // but if selected note was not in the previous data then refetch
-            if (!data.spanningTree.every(n => graphNoteIds.includes(n))) {
-                data = await fetchData({
-                    degree: maxDegree, 
-                    spanningTree: data.spanningTree
-                });
-            }
-        } else {
-            data = await fetchData({degree: maxDegree});
-            data.graphSettings = graphSettings;
-        }
-    } else if (eventName === "processRequestedUpdate") {
-        let queryResult: string[] = undefined;
-        const query = supplement.query.trim();
-        const degree = supplement.degree;
-        const showTags = supplement.showTags;
-        
-        await joplin.settings.setValue("MAX_TREE_DEPTH", degree);
-        await joplin.settings.setValue("SHOW_TAGS", showTags);
-
-        if (query) {
-            const searchResult = await joplinData.executeSearch(query);
-            queryResult = searchResult.map(n => n.id);
-        } 
-
         data = await fetchData({
-            degree: degree,
-            spanningTree: queryResult,
-            filterQuery: supplement.filter
+            degree: graphSettings.maxDepth,
+            spanningTree: data.spanningTree,
+            filterQuery: graphSettings.filter
         });
-
-    } else if (eventName === "pushSettings") {
         data.graphSettings = graphSettings;
+        prevSettings = Object.assign({}, graphSettings);
+        // }
+    } else if (eventName === "pushSettings") {
+        if (JSON.stringify(graphSettings) === JSON.stringify(prevSettings)) return;
+        data.graphSettings = graphSettings;
+        prevSettings = Object.assign({}, graphSettings);
     }
 
     modelChanges.push({ name: eventName, data: data, resp: resp});

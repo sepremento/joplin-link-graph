@@ -246,7 +246,7 @@ async function getLinkedNodes(
         // Traverse a new batch of pending note ids, storing the note data in
         // the resulting map, and stashing the newly found linked notes for the
         // next iteration.
-        
+
         // applyFilters
         if (degree !== 0) pending = pending.filter(n => !noteIdsToExclude.has(n));
 
@@ -336,7 +336,6 @@ export async function buildTagNodes(nodes: Map<string, Node>, all: boolean): Pro
     const notesNodes = new Map(Array.from(nodes).filter(([_, v]) => !v.is_tag))
     const noteIdsArr = Array.from(notesNodes.keys());
     let uniqueTags: Array<Tag> = [];
-    const uniqueTagIds = new Set();
 
     if (all) {
         // if building Global View
@@ -352,6 +351,7 @@ export async function buildTagNodes(nodes: Map<string, Node>, all: boolean): Pro
 
     } else {
         // collect all tags present in given notes
+        const uniqueTagIds = new Set();
         const tagsPromises = noteIdsArr.map((id) =>
             joplin.data.get(["notes", id, "tags"], {
                 fields: ["id", "title"]
@@ -381,7 +381,7 @@ export async function buildTagNodes(nodes: Map<string, Node>, all: boolean): Pro
         const title = uniqueTags[i].title;
         const links = notesForTags[i].items.map(({ id }) => id);
 
-        if (!links) continue;
+        if (links.length === 0) continue;
 
         if (!tagNodes.has(tagId)) tagNodes.set(tagId, {
             id: tagId,

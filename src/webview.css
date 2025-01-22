@@ -27,16 +27,20 @@
 
 details {
     margin: 5px 0 0;
+    max-height: 1.5em;
     overflow: hidden;
-    transition: height 0.5s ease;
+    transition: max-height 0.5s ease-out;
 }
 
 details:not([open]) {
     height: 1.5em;
+    max-height: 1.5em;
 }
 
 details[open] {
-    height: 19em;
+    height: auto;
+    max-height: 18em;
+    transition: max-height 0.5s ease-out;
 }
 
 details:hover {
@@ -106,11 +110,6 @@ input:checked + .toggle:before {
     flex-basis: fit-content;
 }
 
-.force-block label {
-    min-width: 150px;
-    flex-basis: 80%;
-}
-
 .drag-handle {
     position: absolute;
     width: 100%;
@@ -126,10 +125,30 @@ input:checked + .toggle:before {
     cursor: grab;
 }
 
+.del-btn, #add-group-btn {
+    min-width: 30px !important;
+    flex-basis: 5% !important;
+    flex-grow: 1 !important;
+    text-align: center !important;
+    border-bottom: none !important;
+}
+
+.force-block label {
+    min-width: 150px;
+    flex-basis: 80%;
+}
+
 .force-block input {
     min-width: 30px;
     flex-basis: 20%;
     flex-shrink: 3;
+}
+
+.group-color, #color-stub {
+    min-width: 30px !important;
+    flex-basis: 10% !important;
+    flex-grow: 1 !important;
+    border-bottom: none !important;
 }
 
 .slider {
@@ -212,5 +231,4 @@ input:checked + .toggle:before {
     background-color: #333;
     padding: 30px 10px 15px 10px;
 }
-
 

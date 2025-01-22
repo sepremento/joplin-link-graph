@@ -72,6 +72,14 @@ export async function registerSettings() {
       label: "User set filters",
       description: "",
     },
+    GROUPS: {
+      value: "",
+      type: SettingItemType.Object,
+      section: sectionName,
+      public: true,
+      label: "Colored groups",
+      description: "",
+    },
     MAX_TREE_DEPTH: {
       value: DEFAULT_MAX_DEGREE,
       type: SettingItemType.Int,

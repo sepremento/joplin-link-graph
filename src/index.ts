@@ -1,18 +1,20 @@
 import joplin from "api";
 import * as joplinData from "./data";
 import { registerSettings } from "./settings";
-import { DataSpec, GraphData } from "./model";
+import { DataSpec, GraphData, GraphSettings } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
+import JoplinPlugins from "api/JoplinPlugins";
 var deepEqual = require("fast-deep-equal");
 
 let data: GraphData;
+let nodeGroupMap = new Map();
 let pollCb: any;
 let modelChanges = [];
 var prevNoteLinks = [];
 var prevNoteTitle: string;
-var prevSettings = {};
+var prevSettings: any = {};
 var syncOngoing = false;
-const USER_INPUT = ["QUERY", "FILTER", "MAX_TREE_DEPTH", "SHOW_TAGS"]
+const USER_INPUT = ["QUERY", "FILTER", "MAX_TREE_DEPTH", "SHOW_TAGS", "GROUPS"]
 
 
 joplin.plugins.register({
@@ -65,10 +67,13 @@ async function collectGraphSettings() {
         radiusScale: await joplin.settings.value('RADIUS_SCALE'),
         linkDistance: await joplin.settings.value('LINK_DISTANCE'),
         linkStrength: await joplin.settings.value('LINK_STRENGTH'),
+
+        groups: await joplin.settings.value('GROUPS'),
     }
 }
 
 async function fetchData(spec: DataSpec) {
+    console.log("fetchData called!", spec);
     const fetchForNoteIds: Array<string> = [];
 
     if (typeof(spec.spanningTree) === "undefined") {
@@ -113,6 +118,7 @@ async function fetchData(spec: DataSpec) {
             id: id,
             title: node.title,
             parent_id: node.parent_id,
+            color: "",
             folder: node.folder,
             is_tag: node.is_tag,
             distanceToCurrentNode: node.distanceToCurrentNote
@@ -171,7 +177,7 @@ async function drawPanel(panel: any) {
 </select>
 </div>
 -->
-<details>
+<details id="forces">
 <summary>Graph Parameters</summary>
 <div class="force-block">
 <label class="label" for="nocollide-radius-input">No Collide Radius</label>
@@ -200,6 +206,14 @@ async function drawPanel(panel: any) {
 <div class="control-block">
 <label class="label" for="temperature-slider">Alpha</label>
 <input class="settings slider" id="temperature-slider" type="range" min="0" max="100" value="30"></input>
+</div>
+</details>
+<details id="groups">
+<summary>Groups</summary>
+<div class="control-block" id="group-block-stub">
+<input id="group-stub" type="string"></input>
+<input id="color-stub" type="color" value="#a6cee3"></input>
+<input id="add-group-btn" type="button" value="+"></input>
 </div>
 </details>
 </div>
@@ -256,7 +270,10 @@ async function processWebviewMessage(message: any) {
         case "open_tag":
             return await joplin.commands.execute("openTag", message.id);
         case "set_setting":
-            if (USER_INPUT.includes(message.key)) {
+            console.log(message);
+            if (message.key === "GROUPS") {
+                updateUI("colorsChange");
+            } else if (USER_INPUT.includes(message.key)) {
                 updateUI("noteSelectionChange");
             } else {
                 updateUI("pushSettings");
@@ -266,6 +283,7 @@ async function processWebviewMessage(message: any) {
 }
 
 async function updateUI(eventName: string) {
+    console.log(`updateUI called with eventName: ${eventName}!`);
     //during sync do nothing;
     if (syncOngoing) { return; }
 
@@ -280,9 +298,11 @@ async function updateUI(eventName: string) {
         data = await fetchData({degree: maxDegree});
         data.graphSettings = graphSettings;
         prevSettings = Object.assign({}, graphSettings);
+        console.log("prevSettings changed!");
 
         eventName = "initialGraph";
         prevNoteTitle = selectedNote.title;
+        nodeGroupMap = await joplinData.buildNodeGroupMap(graphSettings.groups);
 
     } else if (eventName === "noteChange") {
         // Don't update the graph is the links in this note haven't changed.
@@ -342,14 +362,93 @@ async function updateUI(eventName: string) {
         });
         data.graphSettings = graphSettings;
         prevSettings = Object.assign({}, graphSettings);
-        // }
+        console.log("prevSettings changed!");
+    } else if (eventName === "colorsChange") {
+        // don't need to fetch new nodes, just update node to color map and 
+        // update nodes
+        // const newlyAddedGroup = getObjDiff(graphSettings.groups, prevSettings.groups);
+        // console.log("newlyAddedGroup:", newlyAddedGroup);
+        // const changedFilterGroup = isFilterChanged(graphSettings.groups, prevSettings.groups);
+        // console.log("changedFilterGroup:", changedFilterGroup);
+        // const changedColorGroup = isColorChanged(graphSettings.groups, prevSettings.groups);
+        // console.log("changedColorGroup:", changedColorGroup);
+
+        const change = getObjDiff(graphSettings.groups, prevSettings.groups);
+        const action = change.action, groupName = change.group;
+        console.log("change:", change);
+
+        if (action === "add" || action === "filter") {
+            // const group = newlyAddedGroup ? newlyAddedGroup : changedFilterGroup;
+            const groupFilter = graphSettings.groups[groupName].filter;
+            const searchResult = await joplinData.executeSearch(groupFilter);
+            const nodeIds = searchResult.map(({ id, }) => id)
+            const nodeColorMap = new Map();
+
+            for (let nodeId of nodeIds) {
+                nodeColorMap.set(nodeId, graphSettings.groups[groupName].color);
+            }
+            nodeGroupMap.set(groupName, nodeColorMap);
+        } else if (action === "color") {
+            const group = nodeGroupMap.get(groupName)
+            for (let [key, _] of group.entries()) {
+                group.set(key, graphSettings.groups[groupName].color);
+            }
+        } else if (action === "remove") {
+            nodeGroupMap.delete(groupName);
+        }
+        data.graphSettings = graphSettings;
+        prevSettings = Object.assign({}, graphSettings);
+        console.log("prevSettings changed!");
+
     } else if (eventName === "pushSettings") {
         if (JSON.stringify(graphSettings) === JSON.stringify(prevSettings)) return;
         data.graphSettings = graphSettings;
         prevSettings = Object.assign({}, graphSettings);
+        console.log("prevSettings changed!");
     }
 
+    console.log("graphSettings.groups:", graphSettings.groups)
+    console.log("nodeGroupMap:", nodeGroupMap);
+    for (let node of data.nodes) {
+        node.color = '';
+        for (let [_, nodeMap] of nodeGroupMap.entries())
+            if (nodeMap.has(node.id)) node.color = nodeMap.get(node.id);
+    }
+
+    console.log("data to send to WebView:", data);
     modelChanges.push({ name: eventName, data: data, resp: resp});
     notifyUI();
 }
 
+function getObjDiff(cur: any, prev: any) {
+    console.log("getObjDiff called!");
+    console.log("cur:", cur, "prev:", prev);
+    for (let key in cur) {
+        // console.log("key:", key);
+        if (!(key in prev)) return { action: "add", group: key };
+        if (cur[key].filter !== prev[key].filter) return { action: "filter", group: key };
+        if (cur[key].color !== prev[key].color) return { action: "color", group: key };
+    }
+    for (let key in prev) {
+        if (!(key in cur)) return { action: "remove", group: key };
+    };
+    return { action: "other" }
+}
+
+function isColorChanged(cur: any, prev: any) {
+    console.log("isColorChanged called!");
+    console.log("cur:", cur, "prev:", prev);
+    for (let key in cur) {
+        console.log("key:", key);
+    }
+    return undefined;
+}
+
+function isFilterChanged(cur: any, prev: any) {
+    console.log("isFilterChanged called!");
+    console.log("cur:", cur, "prev:", prev);
+    for (let key in cur) {
+        console.log("key:", key);
+    }
+    return undefined;
+}

@@ -16,7 +16,9 @@ function poll(msg) {
             if (resp.name === "initialGraph") graph.init(resp.data);
             if (resp.name === "pushSettings") graph.updateSettings(resp.data);
             if (resp.name === "noteChange:title") graph.updateNodeLabel(resp.resp); 
-            if (resp.name === "noteChange:links" || resp.name === "noteSelectionChange")
+            if (resp.name === "noteChange:links" 
+                || resp.name === "noteSelectionChange"
+                || resp.name === "colorsChange")
                 graph.updateGraph(resp.data);
             poll();
         });
@@ -24,6 +26,7 @@ function poll(msg) {
 
 function setSetting(settingName, newVal) {
     // will automically trigger ui update of graph
+    console.log("setSetting called!", settingName, newVal);
     return webviewApi.postMessage({
         name: "set_setting",
         key: settingName,
@@ -100,6 +103,10 @@ function createGraph() {
         if (node.is_tag) {
             r = 12;
             context.fillStyle = "#834983";
+        }
+
+        if (node.color) {
+            context.fillStyle = node.color;
         }
 
         context.moveTo(node.x + r, node.y);
@@ -337,6 +344,7 @@ function createGraph() {
         },
 
         updateGraph(data) {
+            console.log("updateGraph called!");
             simulation.stop();
 
             graphNodes = data.nodes.map(d => {
@@ -345,6 +353,8 @@ function createGraph() {
             }); 
             graphLinks = data.edges;
             spanningTree = data.spanningTree;
+            console.log("graphNodes:", graphNodes);
+            console.log("graphLinks:", graphLinks);
 
             if (!simulation) simulation = initSimulation();
 

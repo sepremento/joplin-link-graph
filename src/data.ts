@@ -395,6 +395,30 @@ export async function buildTagNodes(nodes: Map<string, Node>, all: boolean): Pro
     return tagNodes;
 }
 
+interface ColorGroup {
+    filter: string,
+    color: string
+}
+
+export async function buildNodeGroupMap(groups: Map<string, ColorGroup>): Promise<Map<string, Map<string, string>>> {
+    const nodeGroupMap: Map<string, Map<string, string>> = new Map();
+    const groupsArr = Array.from(Object.entries(groups));
+    const promises = groupsArr.map(([_, group]) => executeSearch(group.filter));
+    const results = await Promise.all(promises.map((p) => p.catch((e) => e)));
+    
+    for (let i=0; i<groupsArr.length; i++) {
+        const groupName = groupsArr[i][0];
+        const groupColor = groupsArr[i][1].color;
+        const nodeColorMap: Map<string, string> = new Map();
+        const nodeArr = results[i];
+        for (let note of nodeArr) {
+            nodeColorMap.set(note.id, groupColor);
+        }
+        nodeGroupMap.set(groupName, nodeColorMap);
+    }
+    console.log(nodeGroupMap);
+    return nodeGroupMap
+}
 
 export async function executeSearch(query: string): Promise<Array<JoplinNote>> {
     let page = 1;

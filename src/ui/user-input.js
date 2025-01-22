@@ -19,8 +19,10 @@ const showTagsSwitch = document.getElementById("show-tags-switch");
 const maxDistInput = document.getElementById("distance-slider");
 const temperatureInput = document.getElementById("temperature-slider");
 
-const scale = ["#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c",
-    "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928"]
+const scale = [
+    "#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c",
+    "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928"
+]
 
 let offsetX, offsetY;
 
@@ -76,7 +78,6 @@ function chromeRangeInputFix() {
 }
 
 export function setupGraphHandle(settings) {
-    console.log("setupGraphHandle called!");
     queryInput.value = settings.query;
     filterInput.value = settings.filter;
     showTagsSwitch.checked = settings.showTags;
@@ -94,7 +95,6 @@ export function setupGraphHandle(settings) {
 }
 
 function makeGroupValues() {
-    console.log("makeGroupValues called!");
     const groupDivs = document.querySelectorAll(".groups");
 
     const groupValues = {};
@@ -112,13 +112,10 @@ function makeGroupValues() {
 
     }
 
-    console.log("groupValues:", groupValues);
     return groupValues
 }
 
 export function addGroupEventListeners(setSetting) {
-    console.log("addGroupEventListeners called!");
-
     const oldInputs = document.querySelectorAll(".group-input");
     const oldColors = document.querySelectorAll(".group-color");
     const oldDels = document.querySelectorAll(".del-btn");
@@ -156,11 +153,9 @@ export function addGroupEventListeners(setSetting) {
                 setSetting("GROUPS", makeGroupValues());
             }
         })
-        console.log("eventListener was added for:", newGroupInput);
         newGroupColor.addEventListener("change", () => {
             setSetting("GROUPS", makeGroupValues());
         });
-        console.log("eventListener was added for:", newGroupColor);
 
         newDel.addEventListener("click", () => {
             newDel.parentNode.parentNode.removeChild(newDel.parentNode);
@@ -176,18 +171,15 @@ export function addGroupEventListeners(setSetting) {
             }
             setSetting("GROUPS", makeGroupValues());
         });
-        console.log("eventListener was added for:", newDel);
     }
 }
 
 export function initFront(initialValues, setSetting) {
-    console.log("initFront called!");
 
     chromeRangeInputFix();
     setupGraphHandle(initialValues);
 
     const groupNames = Object.keys(initialValues.groups)
-    console.log("groupNames:", groupNames);
 
     //setting up color groups separately because setupGraphHandle is called
     //in another part of code so stands in the way
@@ -204,10 +196,6 @@ export function initFront(initialValues, setSetting) {
              <input class="del-btn" id="del-group-${n}" type="button" value="🗑"></input>
              </div>`
         )
-        // const details = document.getElementById("groups")
-        // details.style.transition = "height 0.5s ease-out";
-        // let height = details.style.height ? details.style.height : "1.5em";
-        // details.style.height = +height.substring(height.length - 2) + 1 + "em"
     }
 
     chargeStrengthInput.addEventListener("change", () => {
@@ -260,28 +248,6 @@ export function initFront(initialValues, setSetting) {
         }
     });
 
-    // details.addEventListener('toggle', function() {
-    //     if (details.open) {
-    //         // Установка высоты в "auto" сбрасывает transition, поэтому мы используем промежуточный шаг
-    //         details.style.height = details.scrollHeight + "px";
-    //         requestAnimationFrame(() => {
-    //             details.style.transition = "height 0.5s ease-out";
-    //             details.style.height = details.scrollHeight + "px";
-    //             setTimeout(() => {
-    //                 details.style.height = "auto"; // Возвращаем к auto после анимации
-    //             }, 500); // Время должно соответствовать transition-duration
-    //         });
-    //     } else {
-    //         // Закрытие
-    //         details.style.transition = "height 0.5s ease-out";
-    //         // details.style.height = "1.5em"; // Ваше закрытое состояние
-    //         // details.style.height = details.scrollHeight + "px";
-    //         requestAnimationFrame(() => {
-    //             details.style.height = "1.5em"; // Ваше закрытое состояние
-    //         });
-    //     }
-    // });
-
     addGroupBtn.addEventListener("click", () => {
         const groupDivs = document.querySelectorAll("div.groups");
         const n = groupDivs.length + 1;
@@ -300,12 +266,7 @@ export function initFront(initialValues, setSetting) {
         groupInput.value = "";
         groupInput.focus()
         const newColor = pickRandomColor(color);
-        console.log("newColor:", newColor);
         colorEl.value = newColor;
-        // const details = document.getElementById("groups")
-        // details.style.transition = "height 0.5s ease-out";
-        // let height = details.style.height ? details.style.height : "1.5em";
-        // details.style.height = +height.substring(height.length - 2) + 1 + "em"
 
         addGroupEventListeners(setSetting);
         setSetting("GROUPS", makeGroupValues());
@@ -313,7 +274,6 @@ export function initFront(initialValues, setSetting) {
 
     addGroupEventListeners(setSetting);
 }
-
 
 function generateRandomString(length) {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

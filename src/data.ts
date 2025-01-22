@@ -416,7 +416,6 @@ export async function buildNodeGroupMap(groups: Map<string, ColorGroup>): Promis
         }
         nodeGroupMap.set(groupName, nodeColorMap);
     }
-    console.log(nodeGroupMap);
     return nodeGroupMap
 }
 

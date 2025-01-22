@@ -1,9 +1,9 @@
 import joplin from "api";
 import * as joplinData from "./data";
 import { registerSettings } from "./settings";
-import { DataSpec, GraphData, GraphSettings } from "./model";
+import { DataSpec, GraphData } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
-import JoplinPlugins from "api/JoplinPlugins";
+
 var deepEqual = require("fast-deep-equal");
 
 let data: GraphData;
@@ -73,7 +73,6 @@ async function collectGraphSettings() {
 }
 
 async function fetchData(spec: DataSpec) {
-    console.log("fetchData called!", spec);
     const fetchForNoteIds: Array<string> = [];
 
     if (typeof(spec.spanningTree) === "undefined") {
@@ -270,7 +269,6 @@ async function processWebviewMessage(message: any) {
         case "open_tag":
             return await joplin.commands.execute("openTag", message.id);
         case "set_setting":
-            console.log(message);
             if (message.key === "GROUPS") {
                 updateUI("colorsChange");
             } else if (USER_INPUT.includes(message.key)) {
@@ -283,7 +281,6 @@ async function processWebviewMessage(message: any) {
 }
 
 async function updateUI(eventName: string) {
-    console.log(`updateUI called with eventName: ${eventName}!`);
     //during sync do nothing;
     if (syncOngoing) { return; }
 
@@ -298,7 +295,6 @@ async function updateUI(eventName: string) {
         data = await fetchData({degree: maxDegree});
         data.graphSettings = graphSettings;
         prevSettings = Object.assign({}, graphSettings);
-        console.log("prevSettings changed!");
 
         eventName = "initialGraph";
         prevNoteTitle = selectedNote.title;
@@ -362,20 +358,11 @@ async function updateUI(eventName: string) {
         });
         data.graphSettings = graphSettings;
         prevSettings = Object.assign({}, graphSettings);
-        console.log("prevSettings changed!");
     } else if (eventName === "colorsChange") {
         // don't need to fetch new nodes, just update node to color map and 
         // update nodes
-        // const newlyAddedGroup = getObjDiff(graphSettings.groups, prevSettings.groups);
-        // console.log("newlyAddedGroup:", newlyAddedGroup);
-        // const changedFilterGroup = isFilterChanged(graphSettings.groups, prevSettings.groups);
-        // console.log("changedFilterGroup:", changedFilterGroup);
-        // const changedColorGroup = isColorChanged(graphSettings.groups, prevSettings.groups);
-        // console.log("changedColorGroup:", changedColorGroup);
-
-        const change = getObjDiff(graphSettings.groups, prevSettings.groups);
+        const change = getGroupChange(graphSettings.groups, prevSettings.groups);
         const action = change.action, groupName = change.group;
-        console.log("change:", change);
 
         if (action === "add" || action === "filter") {
             // const group = newlyAddedGroup ? newlyAddedGroup : changedFilterGroup;
@@ -398,33 +385,25 @@ async function updateUI(eventName: string) {
         }
         data.graphSettings = graphSettings;
         prevSettings = Object.assign({}, graphSettings);
-        console.log("prevSettings changed!");
 
     } else if (eventName === "pushSettings") {
         if (JSON.stringify(graphSettings) === JSON.stringify(prevSettings)) return;
         data.graphSettings = graphSettings;
         prevSettings = Object.assign({}, graphSettings);
-        console.log("prevSettings changed!");
     }
 
-    console.log("graphSettings.groups:", graphSettings.groups)
-    console.log("nodeGroupMap:", nodeGroupMap);
     for (let node of data.nodes) {
         node.color = '';
         for (let [_, nodeMap] of nodeGroupMap.entries())
             if (nodeMap.has(node.id)) node.color = nodeMap.get(node.id);
     }
 
-    console.log("data to send to WebView:", data);
     modelChanges.push({ name: eventName, data: data, resp: resp});
     notifyUI();
 }
 
-function getObjDiff(cur: any, prev: any) {
-    console.log("getObjDiff called!");
-    console.log("cur:", cur, "prev:", prev);
+function getGroupChange(cur: any, prev: any) {
     for (let key in cur) {
-        // console.log("key:", key);
         if (!(key in prev)) return { action: "add", group: key };
         if (cur[key].filter !== prev[key].filter) return { action: "filter", group: key };
         if (cur[key].color !== prev[key].color) return { action: "color", group: key };
@@ -435,20 +414,3 @@ function getObjDiff(cur: any, prev: any) {
     return { action: "other" }
 }
 
-function isColorChanged(cur: any, prev: any) {
-    console.log("isColorChanged called!");
-    console.log("cur:", cur, "prev:", prev);
-    for (let key in cur) {
-        console.log("key:", key);
-    }
-    return undefined;
-}
-
-function isFilterChanged(cur: any, prev: any) {
-    console.log("isFilterChanged called!");
-    console.log("cur:", cur, "prev:", prev);
-    for (let key in cur) {
-        console.log("key:", key);
-    }
-    return undefined;
-}

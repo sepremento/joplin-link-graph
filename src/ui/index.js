@@ -26,7 +26,6 @@ function poll(msg) {
 
 function setSetting(settingName, newVal) {
     // will automically trigger ui update of graph
-    console.log("setSetting called!", settingName, newVal);
     return webviewApi.postMessage({
         name: "set_setting",
         key: settingName,
@@ -344,7 +343,6 @@ function createGraph() {
         },
 
         updateGraph(data) {
-            console.log("updateGraph called!");
             simulation.stop();
 
             graphNodes = data.nodes.map(d => {
@@ -353,8 +351,6 @@ function createGraph() {
             }); 
             graphLinks = data.edges;
             spanningTree = data.spanningTree;
-            console.log("graphNodes:", graphNodes);
-            console.log("graphLinks:", graphLinks);
 
             if (!simulation) simulation = initSimulation();
 

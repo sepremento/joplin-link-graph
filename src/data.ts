@@ -32,48 +32,6 @@ async function getNotebooks(): Promise<Map<string, Notebook>> {
 }
 
 
-function getFilteredNotebooks(
-    notebooks: Map<string, Notebook>,
-    filteredNotebookNames: Array<string>,
-    shouldFilterChildren: boolean,
-    isIncludeFilter: boolean
-): Map<string, Notebook> {
-    const notebookIdsByName = new Map<string, string>();
-    for (const [id, n] of notebooks) { notebookIdsByName.set(n.title, id) }
-
-    // Get a list of valid notebook names to filter out.
-    filteredNotebookNames = filteredNotebookNames.filter((name) =>
-        notebookIdsByName.has(name)
-    );
-
-    function shouldIncludeNotebook(parent_id: string): boolean {
-        var parentNotebook: Notebook = notebooks.get(parent_id);
-        // Filter out the direct parent.
-        if (filteredNotebookNames.includes(parentNotebook.title)) {
-            return isIncludeFilter;
-        }
-
-        // Filter a note if any of its ancestor notebooks are filtered.
-        if (shouldFilterChildren) {
-            while (parentNotebook !== undefined) {
-                if (filteredNotebookNames.includes(parentNotebook.title)) {
-                    return isIncludeFilter;
-                }
-                parentNotebook = notebooks.get(parentNotebook.parent_id);
-            }
-        }
-        return !isIncludeFilter;
-    }
-
-    const filteredNotebooks = new Map<string, Notebook>();
-
-    for (const [id, n] of notebooks.entries()) {
-        if (shouldIncludeNotebook(id)) { filteredNotebooks.set(id, n) }
-    }
-    return filteredNotebooks
-}
-
-
 export interface Node {
     id: string;
     parent_id: string;
@@ -99,28 +57,12 @@ export async function getNodes(
 ): Promise<Map<string, Node>> {
 
     const maxNotes = await joplin.settings.value("MAX_NODES");
-    const notebooksToFilter = (await joplin.settings.value('NOTEBOOK_NAMES_TO_FILTER')).split(",");
-
-    const shouldFilterChildren = await joplin.settings.value("SETTING_FILTER_CHILD_NOTEBOOKS");
-    const isIncludeFilter = (await joplin.settings.value("FILTER_IS_INCLUDE_FILTER")) === "include" ? true : false;
 
     const noteIdsToExclude: Set<string> = new Set();
 
     const notebooks = await getNotebooks();
 
     var nodes = new Map<string, Node>();
-    var filteredNotebooks = new Map<string, Notebook>();
-
-    if (notebooksToFilter[0] !== "" || notebooksToFilter.length > 1) {
-        filteredNotebooks = getFilteredNotebooks(
-            notebooks,
-            notebooksToFilter,
-            shouldFilterChildren,
-            isIncludeFilter
-        )
-    } else {
-        filteredNotebooks = notebooks;
-    }
 
     if (filterQuery) {
         const searchResult: Array<JoplinNote> = await executeSearch(filterQuery);
@@ -133,15 +75,11 @@ export async function getNodes(
             maxDegree,
             noteIdsToExclude,
             notebooks,
-            filteredNotebooks,
         );
     } else {
         nodes = await getAllNodes(maxNotes, notebooks, noteIdsToExclude);
     }
 
-    if (notebooksToFilter[0] !== "" || notebooksToFilter.length > 1) {
-        nodes = await filterNotesByNotebookName(nodes, filteredNotebooks);
-    }
     return nodes;
 }
 
@@ -230,7 +168,6 @@ async function getLinkedNodes(
     maxDegree: number,
     noteIdsToExclude: Set<string>,
     notebooks: Map<string, Notebook>,
-    filteredNotebooks: Map<string, Notebook>,
 ): Promise<Map<string, Node>> {
 
     var pending = source_ids;
@@ -239,7 +176,6 @@ async function getLinkedNodes(
     const backlinksMap = new Map();
     var degree = 0;
 
-    const includeBacklinks = await joplin.settings.value("SETTING_INCLUDE_BACKLINKS");
     const showTags = await joplin.settings.value('SHOW_TAGS');
 
     do {
@@ -256,16 +192,12 @@ async function getLinkedNodes(
         }
         pending = [];
 
-        if (includeBacklinks) {
-            const backlinksPromises = joplinNotes.map(n => getAllBacklinksForNote(n.id));
-            let backlinks = await Promise.all(backlinksPromises.map((p) => p.catch((e) => e)));
+        const backlinksPromises = joplinNotes.map(n => getAllBacklinksForNote(n.id));
+        let backlinks = await Promise.all(backlinksPromises.map((p) => p.catch((e) => e)));
 
-            for (let lnk of backlinks) {
-                const filtered = lnk.backlinks.filter(link => 
-                    filteredNotebooks.has(link.parent_id) && !noteIdsToExclude.has(link.id)
-                );
-                backlinksMap.set(lnk.id, filtered.map(({ id, }) => id));
-            }
+        for (let lnk of backlinks) {
+            const filtered = lnk.backlinks.filter(link => !noteIdsToExclude.has(link.id));
+            backlinksMap.set(lnk.id, filtered.map(({ id, }) => id));
         }
 
         for (const joplinNote of joplinNotes) {

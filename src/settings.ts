@@ -39,7 +39,7 @@ export async function registerSettings() {
       value: "",
       type: SettingItemType.Object,
       section: sectionName,
-      public: true,
+      public: false,
       label: "Colored groups",
       description: "",
     },
@@ -80,7 +80,7 @@ export async function registerSettings() {
       public: true,
       label: "Center force strength",
       description:
-        "",
+        "How strong nodes try to reach the center.",
     },
     COLLIDE_RADIUS: {
       advanced: true,
@@ -90,7 +90,7 @@ export async function registerSettings() {
       public: true,
       label: "Collide force radius",
       description:
-        "",
+        "You can't move two nodes closer together than this setting.",
     },
     RADIUS_SCALE: {
       advanced: true,
@@ -100,9 +100,9 @@ export async function registerSettings() {
       type: SettingItemType.Int,
       section: sectionName,
       public: true,
-      label: "Collide force radius",
+      label: "Radial force scale",
       description:
-        "",
+        "This force tries to set nodes on the edge of the circle.",
     },
     LINK_DISTANCE: {
       advanced: true,
@@ -112,7 +112,7 @@ export async function registerSettings() {
       public: true,
       label: "Link force distance",
       description:
-        "",
+        "The desired distance between nodes.",
     },
     LINK_STRENGTH: {
       advanced: true,
@@ -122,7 +122,7 @@ export async function registerSettings() {
       public: true,
       label: "Link force strength",
       description:
-        "",
+        "How strongly two nodes try to sustain the distance between them.",
     },
     ALPHA: {
       advanced: true,
@@ -132,7 +132,7 @@ export async function registerSettings() {
       public: true,
       label: "Alpha Target",
       description:
-        "",
+        "The higher this setting the slower and the better the simulation will converge.",
     },
   });
 }

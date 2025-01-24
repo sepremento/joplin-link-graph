@@ -55,11 +55,16 @@ joplin.plugins.register({
 
 async function collectGraphSettings() {
     return {
-        query: await joplin.settings.value('QUERY'),
+        // these are defined only in the Graph View
         filter: await joplin.settings.value('FILTER'),
         maxDepth: await joplin.settings.value('MAX_TREE_DEPTH'),
+        query: await joplin.settings.value('QUERY'),
         showTags: await joplin.settings.value('SHOW_TAGS'),
 
+        // this is a combined setting of multiple input tags, Graph View only
+        groups: await joplin.settings.value('GROUPS'),
+
+        // these are defined both in Options and in Graph View
         alpha: await joplin.settings.value('ALPHA'),
         chargeStrength: await joplin.settings.value('CHARGE_STRENGTH'),
         centerStrength: await joplin.settings.value('CENTER_STRENGTH'),
@@ -67,8 +72,6 @@ async function collectGraphSettings() {
         radiusScale: await joplin.settings.value('RADIUS_SCALE'),
         linkDistance: await joplin.settings.value('LINK_DISTANCE'),
         linkStrength: await joplin.settings.value('LINK_STRENGTH'),
-
-        groups: await joplin.settings.value('GROUPS'),
     }
 }
 
@@ -105,6 +108,7 @@ async function fetchData(spec: DataSpec) {
 
             // The destination note could have been deleted.
             const linkDestExists = nodes.has(link);
+
             if (!linkDestExists) { continue; }
 
             data.edges.push({

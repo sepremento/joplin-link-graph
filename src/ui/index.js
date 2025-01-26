@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import * as userInput from "./user-input.js"
+import * as userInput from "./user-input.ts"
 
 var width = window.innerWidth;
 var height = window.innerHeight;

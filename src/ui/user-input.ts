@@ -1,37 +1,36 @@
 const graphContainer = document.getElementById('container');
 const draggables = document.querySelectorAll('div.drag-handle');
 
-const queryInput = document.getElementById("query-input");
-const filterInput = document.getElementById("filter-input");
-const distOutput = document.getElementById("distance-output");
+const queryInput = document.getElementById("query-input") as HTMLInputElement;
+const filterInput = document.getElementById("filter-input") as HTMLInputElement;
+const distOutput = document.getElementById("distance-output") as HTMLOutputElement;
 
-const details = document.getElementById("groups")
-const groupInput = document.getElementById("group-stub");
-const addGroupBtn = document.getElementById("add-group-btn");
+const groupInput = document.getElementById("group-stub") as HTMLInputElement;
+const addGroupBtn = document.getElementById("add-group-btn") as HTMLInputElement;
 
-const chargeStrengthInput = document.getElementById("charge-strength-input");
-const centerStrenthInput = document.getElementById("center-strength-input");
-const collideRadiusInput = document.getElementById("nocollide-radius-input");
-const radiusScaleInput = document.getElementById("radius-scale-input");
-const linkStrenthInput = document.getElementById("link-strength-input");
-const linkDistanceInput = document.getElementById("link-distance-input");
-const showTagsSwitch = document.getElementById("show-tags-switch");
-const maxDistInput = document.getElementById("distance-slider");
-const temperatureInput = document.getElementById("temperature-slider");
+const chargeStrengthInput = document.getElementById("charge-strength-input") as HTMLInputElement;
+const centerStrenthInput = document.getElementById("center-strength-input") as HTMLInputElement;
+const collideRadiusInput = document.getElementById("nocollide-radius-input") as HTMLInputElement;
+const radiusScaleInput = document.getElementById("radius-scale-input") as HTMLInputElement;
+const linkStrenthInput = document.getElementById("link-strength-input") as HTMLInputElement;
+const linkDistanceInput = document.getElementById("link-distance-input") as HTMLInputElement;
+const showTagsSwitch = document.getElementById("show-tags-switch") as HTMLInputElement;
+const maxDistInput = document.getElementById("distance-slider") as HTMLInputElement;
+const temperatureInput = document.getElementById("temperature-slider") as HTMLInputElement;
 
 const scale = [
     "#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c",
     "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928"
 ]
 
-let offsetX, offsetY;
+let offsetX: number, offsetY: number;
 
 for (const draggable of draggables) {
     draggable.addEventListener('mousedown', drag);
-    draggable.addEventListener('mouseup', (ev) => {
+    draggable.addEventListener('mouseup', (_) => {
         document.removeEventListener('mousemove', move)
     }) 
-    draggable.addEventListener('mouseout', (ev) => {
+    draggable.addEventListener('mouseout', (_) => {
         document.removeEventListener('mousemove', move)
     }) 
 }
@@ -100,10 +99,10 @@ function makeGroupValues() {
     const groupValues = {};
 
     for (let i=0; i<groupDivs.length; i++) {
-        const input = groupDivs[i].querySelector(".group-input");
+        const input = groupDivs[i].querySelector(".group-input") as HTMLInputElement;
         const name = groupDivs[i].id
         const filter = input.value.trim();
-        const color = groupDivs[i].querySelector(".group-color").value;
+        const color = (groupDivs[i].querySelector(".group-color") as HTMLInputElement).value;
 
         if (filter) groupValues[name] ={
             filter: filter,
@@ -165,7 +164,7 @@ export function addGroupEventListeners(setSetting) {
                 // el.setAttribute("id", n);
                 const input = el.querySelector(".group-input");
                 const delBtn = el.querySelector(".del-btn");
-                input.setAttribute("data", n);
+                input.setAttribute("data", `${n}`);
                 delBtn.setAttribute("id", `del-group-${n}`);
                 n++;
             }
@@ -185,7 +184,7 @@ export function initFront(initialValues, setSetting) {
     //in another part of code so stands in the way
     for (let i=0; i<groupNames.length; i++) {
         const groupBlockStub = document.getElementById("group-block-stub");
-        const name = groupNames[i] ? groupNames[i] : generateRandomString();
+        const name = groupNames[i] ? groupNames[i] : generateRandomString(8);
         const filter = initialValues.groups[name].filter;
         const color = initialValues.groups[name].color;
         const n = i+1;
@@ -254,7 +253,7 @@ export function initFront(initialValues, setSetting) {
         const groupBlockStub = document.getElementById("group-block-stub");
         const name = generateRandomString(8);
         const filterText = groupInput.value;
-        const colorEl = document.getElementById("color-stub");
+        const colorEl = (document.getElementById("color-stub") as HTMLInputElement);
         const color = colorEl.value;
         groupBlockStub.insertAdjacentHTML("beforebegin",
             `<div class="control-block groups" id="${name}">

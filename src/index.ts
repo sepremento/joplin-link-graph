@@ -4,8 +4,6 @@ import { registerSettings } from "./settings";
 import { DataSpec, GraphData } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
 
-var deepEqual = require("fast-deep-equal");
-
 let data: GraphData;
 let nodeGroupMap = new Map();
 let pollCb: any;
@@ -320,7 +318,8 @@ async function updateUI(eventName: string) {
                 newTitle: selectedNote.title
             };
 
-        } else if (!deepEqual(noteLinks, prevNoteLinks)) {
+        // } else if (!deepEqual(noteLinks, prevNoteLinks)) {
+        } else if (!arraysEqual(noteLinks, prevNoteLinks)) {
 
             prevNoteLinks = noteLinks;
             eventName += ":links";
@@ -369,7 +368,6 @@ async function updateUI(eventName: string) {
         const action = change.action, groupName = change.group;
 
         if (action === "add" || action === "filter") {
-            // const group = newlyAddedGroup ? newlyAddedGroup : changedFilterGroup;
             const groupFilter = graphSettings.groups[groupName].filter;
             const searchResult = await joplinData.executeSearch(groupFilter);
             const nodeIds = searchResult.map(({ id, }) => id)
@@ -416,5 +414,12 @@ function getGroupChange(cur: any, prev: any) {
         if (!(key in cur)) return { action: "remove", group: key };
     };
     return { action: "other" }
+}
+
+function arraysEqual(arr1: Array<string>, arr2: Array<string>): boolean {
+    if (arr1.length !== arr2.length) return false;
+    const sortedArr1 = arr1.sort();
+    const sortedArr2 = arr2.sort();
+    return sortedArr1.every((val, idx) => val === sortedArr2[idx]);
 }
 

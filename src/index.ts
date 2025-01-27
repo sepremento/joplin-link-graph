@@ -31,8 +31,8 @@ joplin.plugins.register({
         panels.onMessage(graphPanel, processWebviewMessage);
 
         // Setup callbacks
-        await joplin.workspace.onNoteChange(async () => {
-            updateUI("noteChange");
+        await joplin.workspace.onNoteChange(async (ev) => {
+            if (ev.event === 2) updateUI("noteChange");
         });
         await joplin.workspace.onNoteSelectionChange(async () => {
             updateUI("noteSelectionChange");

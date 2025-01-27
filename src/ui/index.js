@@ -8,20 +8,16 @@ const centerY = height / 2;
 
 // first functions are for communication with the plugin
 
-function poll(msg) {
-    webviewApi.postMessage({
-        name: "poll",
-        msg: msg
-    }).then((resp) => {
-            if (resp.name === "initialGraph") graph.init(resp.data);
-            if (resp.name === "pushSettings") graph.updateSettings(resp.data);
-            if (resp.name === "noteChange:title") graph.updateNodeLabel(resp.resp); 
-            if (resp.name === "noteChange:links" 
-                || resp.name === "noteSelectionChange"
-                || resp.name === "colorsChange")
-                graph.updateGraph(resp.data);
-            poll();
-        });
+async function poll(msg) {
+    const resp = await webviewApi.postMessage({ name: "poll", msg: msg })
+    if (resp.name === "initialGraph") graph.init(resp.data);
+    if (resp.name === "pushSettings") graph.updateSettings(resp.data);
+    if (resp.name === "noteChange:title") graph.updateNodeLabel(resp.resp); 
+    if (resp.name === "noteChange:links" 
+        || resp.name === "noteSelectionChange"
+        || resp.name === "colorsChange")
+        graph.updateGraph(resp.data);
+    poll();
 }
 
 function setSetting(settingName, newVal) {

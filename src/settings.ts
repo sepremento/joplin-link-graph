@@ -72,16 +72,6 @@ export async function registerSettings() {
       description:
         "Positive number defines gravity for nodes, negative number defines electric charge repulsion for nodes",
     },
-    CENTER_STRENGTH: {
-      advanced: true,
-      value: 100,
-      type: SettingItemType.Int,
-      section: sectionName,
-      public: true,
-      label: "Center force strength",
-      description:
-        "How strong nodes try to reach the center.",
-    },
     COLLIDE_RADIUS: {
       advanced: true,
       value: 48,

@@ -9,7 +9,6 @@ const groupInput = document.getElementById("group-stub") as HTMLInputElement;
 const addGroupBtn = document.getElementById("add-group-btn") as HTMLInputElement;
 
 const chargeStrengthInput = document.getElementById("charge-strength-input") as HTMLInputElement;
-const centerStrenthInput = document.getElementById("center-strength-input") as HTMLInputElement;
 const collideRadiusInput = document.getElementById("nocollide-radius-input") as HTMLInputElement;
 const radiusScaleInput = document.getElementById("radius-scale-input") as HTMLInputElement;
 const linkStrenthInput = document.getElementById("link-strength-input") as HTMLInputElement;
@@ -84,7 +83,6 @@ export function setupGraphHandle(settings) {
     distOutput.innerHTML = settings.maxDepth;
 
     chargeStrengthInput.value = settings.chargeStrength;
-    centerStrenthInput.value = settings.centerStrength;
     collideRadiusInput.value = settings.collideRadius;
     radiusScaleInput.value = settings.radiusScale;
     linkDistanceInput.value = settings.linkDistance;
@@ -199,9 +197,6 @@ export function initFront(initialValues, setSetting) {
 
     chargeStrengthInput.addEventListener("change", () => {
         setSetting("CHARGE_STRENGTH", chargeStrengthInput.valueAsNumber);
-    });
-    centerStrenthInput.addEventListener("change", () => {
-        setSetting("CENTER_STRENGTH", centerStrenthInput.valueAsNumber);
     });
     collideRadiusInput.addEventListener("change", () => {
         setSetting("COLLIDE_RADIUS", collideRadiusInput.valueAsNumber);

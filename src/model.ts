@@ -38,7 +38,6 @@ export interface GraphData {
 
 export interface GraphSettings {
   chargeStrength: number;
-  centerStrength: number;
   collideRadius: number;
   linkDistance: number;
   linkStrength: number;

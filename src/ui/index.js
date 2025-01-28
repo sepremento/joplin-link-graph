@@ -256,9 +256,6 @@ function createGraph() {
             .force("charge", d3.forceManyBody()
                 .strength(graphSettings.chargeStrength)
             )
-            .force("center", d3.forceCenter(centerX, centerY)
-                .strength(graphSettings.centerStrength / 100)
-            )
             .force("nocollide", d3.forceCollide(48)
                 .radius(graphSettings.collideRadius)
             )
@@ -372,7 +369,6 @@ function createGraph() {
                 .strength(graphSettings.linkStrength / 100);
             simulation.force("circle").radius(r);
             simulation.force("charge").strength(graphSettings.chargeStrength);
-            simulation.force("center").strength(graphSettings.centerStrength / 100);
             simulation.force("nocollide").radius(graphSettings.collideRadius);
 
             simulation.alpha(graphSettings.alpha / 100);

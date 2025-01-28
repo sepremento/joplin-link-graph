@@ -65,7 +65,6 @@ async function collectGraphSettings() {
         // these are defined both in Options and in Graph View
         alpha: await joplin.settings.value('ALPHA'),
         chargeStrength: await joplin.settings.value('CHARGE_STRENGTH'),
-        centerStrength: await joplin.settings.value('CENTER_STRENGTH'),
         collideRadius: await joplin.settings.value('COLLIDE_RADIUS'),
         radiusScale: await joplin.settings.value('RADIUS_SCALE'),
         linkDistance: await joplin.settings.value('LINK_DISTANCE'),

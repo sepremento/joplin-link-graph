@@ -3,6 +3,7 @@ import * as joplinData from "./data";
 import { registerSettings } from "./settings";
 import { DataSpec, GraphData } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
+import * as fs from 'fs';
 
 let data: GraphData;
 let nodeGroupMap = new Map();
@@ -140,88 +141,8 @@ function notifyUI() {
 }
 
 async function drawPanel(panel: any) {
-    await joplin.views.panels.setHtml(
-        panel,
-        `
-<div class="graph-content">
-<div id="container">
-<div id="graph-handle">
-<div class="drag-handle"></div>
-<div class="control-block">
-<label class="label" for="query-input">Query</label>
-<input id="query-input" type="string"></input>
-</div>
-<div class="control-block">
-<label class="label" for="filter-input">Filter</label>
-<input id="filter-input" type="string"></input>
-</div>
-<div class="control-block">
-<label class="label" for="distance-slider">Max. distance</label>
-<input class="settings slider" id="distance-slider" class="slider" type="range" min="0" max="5" value="2"> </input>
-<output id="distance-output">2</output>
-</div>
-<div class="control-block">
-<label class="label" for="show-tags-switch">Show Tags</label>
-<label class="switch">
-<input type="checkbox" id="show-tags-switch" checked></input>
-<span class="toggle"></span>
-</label>
-</div>
-<!--
-<div class="control-block">
-<label class="label" for="center-strength-input">Backlinks</label>
-<select id="center-strength-input" type="number">
-<option value="backlinks-off">Backlinks Off</option>
-<option value="backlinks-on">Backlinks On</option>
-<option value="directed-graph">Directed Graph</option>
-</select>
-</div>
--->
-<details id="forces">
-<summary>Graph Parameters</summary>
-<div class="force-block">
-<label class="label" for="nocollide-radius-input">No Collide Radius</label>
-<input class="settings" id="nocollide-radius-input" type="number"></input>
-</div>
-<div class="force-block">
-<label class="label" for="link-distance-input">Link Distance</label>
-<input class="settings" id="link-distance-input" type="number"></input>
-</div>
-<div class="force-block">
-<label class="label" for="link-strength-input">Link Strength</label>
-<input class="settings" id="link-strength-input" type="number"></input>
-</div>
-<div class="force-block">
-<label class="label" for="charge-strength-input">Charge Strength</label>
-<input class="settings" id="charge-strength-input" type="number"></input>
-</div>
-<div class="force-block">
-<label class="label" for="center-strength-input">Center Strength</label>
-<input class="settings" id="center-strength-input" type="number"></input>
-</div>
-<div class="control-block">
-<label class="label" for="radius-scale-input">Radius</label>
-<input class="settings slider" id="radius-scale-input" type="range" min="50" max="500" value="100"></input>
-</div>
-<div class="control-block">
-<label class="label" for="temperature-slider">Alpha</label>
-<input class="settings slider" id="temperature-slider" type="range" min="0" max="100" value="30"></input>
-</div>
-</details>
-<details id="groups">
-<summary>Groups</summary>
-<div class="control-block" id="group-block-stub">
-<input id="group-stub" type="string"></input>
-<input id="color-stub" type="color" value="#a6cee3"></input>
-<input id="add-group-btn" type="button" value="+"></input>
-</div>
-</details>
-</div>
-<div id="note_graph"/></div>
-</div>
-</div>
-`
-    );
+    const html = fs.readFileSync('./panel.html', 'utf8');
+    await joplin.views.panels.setHtml(panel, html);
 }
 
 async function registerShowHideCommand(graphPanel: any) {

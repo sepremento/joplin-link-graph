@@ -3,7 +3,7 @@ import * as joplinData from "./data";
 import { registerSettings } from "./settings";
 import { DataSpec, GraphData } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
-import * as fs from 'fs';
+import { panelHtml } from "./panel-html";
 
 let data: GraphData;
 let nodeGroupMap = new Map();
@@ -140,8 +140,7 @@ function notifyUI() {
 }
 
 async function drawPanel(panel: any) {
-    const html = fs.readFileSync('./panel.html', 'utf8');
-    await joplin.views.panels.setHtml(panel, html);
+    await joplin.views.panels.setHtml(panel, panelHtml);
 }
 
 async function registerShowHideCommand(graphPanel: any) {

@@ -17,7 +17,6 @@ export interface Node {
   id: string;
   title: string;
   parent_id: string;
-  folder: string;
   color?: string;
   is_tag: boolean;
   distanceToCurrentNode?: number;

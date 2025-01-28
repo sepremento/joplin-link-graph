@@ -8,30 +8,6 @@ export interface Notebook {
 }
 
 
-async function getNotebooks(): Promise<Map<string, Notebook>> {
-    var notebooks = new Map<string, Notebook>();
-    var page_num = 1;
-    do {
-        var notebooksBatch = await joplin.data.get(
-            ["folders"], 
-            {
-                fields: ["id", "title", "parent_id"],
-                page: page_num,
-            }
-        );
-        for (const notebook of notebooksBatch.items) {
-            notebooks.set(notebook.id, {
-                title: notebook.title,
-                parent_id: notebook.parent_id
-            })
-        }
-        page_num++;
-    } while (notebooksBatch.has_more);
-
-    return notebooks;
-}
-
-
 export interface Node {
     id: string;
     parent_id: string;
@@ -60,8 +36,6 @@ export async function getNodes(
 
     const noteIdsToExclude: Set<string> = new Set();
 
-    const notebooks = await getNotebooks();
-
     var nodes = new Map<string, Node>();
 
     if (filterQuery) {
@@ -74,37 +48,17 @@ export async function getNodes(
             selectedNotes,
             maxDegree,
             noteIdsToExclude,
-            notebooks,
         );
     } else {
-        nodes = await getAllNodes(maxNotes, notebooks, noteIdsToExclude);
+        nodes = await getAllNodes(maxNotes, noteIdsToExclude);
     }
 
     return nodes;
 }
 
-/**
- * Returns a filtered map of notes by notebook name.
- */
-export async function filterNotesByNotebookName(
-    notes: Map<string, Node>,
-    filteredNotebooks: Map<string, Notebook>
-): Promise<Map<string, Node>> {
-    var filteredNotes = new Map<string, Node>();
-
-    for (let [id, n] of notes) {
-        if (filteredNotebooks.has(n.parent_id)) {
-            filteredNotes.set(id, n); 
-        }
-    }
-
-    return filteredNotes;
-}
-
 // Fetches every note.
 async function getAllNodes(
     maxNotes: number,
-    notebooks: Map<string, Notebook>,
     noteIdsToExclude: Set<string>,
 ): Promise<Map<string, Node>> {
     const showTags = await joplin.settings.value('SHOW_TAGS');
@@ -131,7 +85,6 @@ async function getAllNodes(
         if (noteIdsToExclude.has(joplinNote.id)) continue;
 
         const note = buildNodeFromNote(joplinNote);
-        note.folder = notebooks.get(note.parent_id).title;
         nodeMap.set(note.id, note);
     }
 
@@ -167,7 +120,6 @@ async function getLinkedNodes(
     source_ids: Array<string>,
     maxDegree: number,
     noteIdsToExclude: Set<string>,
-    notebooks: Map<string, Notebook>,
 ): Promise<Map<string, Node>> {
 
     var pending = source_ids;
@@ -203,10 +155,6 @@ async function getLinkedNodes(
         for (const joplinNote of joplinNotes) {
             // store note data to be returned at the end of the traversal
             const node = buildNodeFromNote(joplinNote);
-
-            node.folder = notebooks.has(node.parent_id) 
-                ? notebooks.get(node.parent_id).title
-                : undefined
 
             node.distanceToCurrentNote = degree;
             nodeMap.set(joplinNote.id, node);
@@ -407,7 +355,6 @@ export function getAllLinksForNote(noteBody: string): Set<string> {
 
 
 async function getAllBacklinksForNote(noteId: string): Promise<Object> {
-    // async function getAllBacklinksForNote(noteId: string): Promise<string[]> {
     const links: string[] = [];
     let pageNum = 1;
     let response;

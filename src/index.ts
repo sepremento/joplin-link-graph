@@ -120,7 +120,6 @@ async function fetchData(spec: DataSpec) {
             title: node.title,
             parent_id: node.parent_id,
             color: "",
-            folder: node.folder,
             is_tag: node.is_tag,
             distanceToCurrentNode: node.distanceToCurrentNote
         });

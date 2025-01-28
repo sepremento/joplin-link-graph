@@ -215,7 +215,7 @@ function createGraph() {
                     node.faded = false;
                 }
             } else {
-                const adjacentNodes = [];
+                const adjacentNodes = [node.id];
                 for (let link of graphLinks) {
                     if (link.source.id === node.id || link.target.id === node.id) {
                         link.faded = false;

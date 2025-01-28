@@ -3,6 +3,7 @@ import * as userInput from "./user-input.ts"
 
 var width = window.innerWidth;
 var height = window.innerHeight;
+var leftEdge, rightEdge, topEdge, bottomEdge;
 const centerX = width / 2;
 const centerY = height / 2;
 
@@ -30,6 +31,17 @@ function setSetting(settingName, newVal) {
 }
 
 // next graph functions
+//
+function throttle(func, limit) {
+    let lastCall = 0;
+    return function(...args) {
+        const now = Date.now();
+        if (now - lastCall >= limit) {
+            func.apply(this, args);
+            lastCall = now;
+        }
+    };
+}
 
 function createGraph() {
 
@@ -70,6 +82,13 @@ function createGraph() {
     };
 
     function drawNode(node) {
+        if (
+                node.x < leftEdge ||
+                node.x > rightEdge || 
+                node.y < topEdge || 
+                node.y > bottomEdge 
+        ) return;
+
         const depth = node.distanceToCurrentNode
             ? node.distanceToCurrentNode
             : 0;
@@ -114,6 +133,12 @@ function createGraph() {
     };
 
     function drawLink(link) {
+        if (
+            (link.target.x < 0 && link.source.x < 0) ||
+            (link.target.x > width && link.source.x > width) ||
+            (link.target.y < 0 && link.source.y < 0) ||
+            (link.target.y > height && link.source.y > height) 
+        ) return;
         context.beginPath();        
         context.globalAlpha = 0.1;
         context.strokeStyle = "#999";
@@ -162,6 +187,8 @@ function createGraph() {
         );
         context.stroke();
     };
+    
+    const throttledDraw = throttle(draw, 20);
 
     function draw() {
         context.clearRect(0, 0, width, height);
@@ -297,6 +324,10 @@ function createGraph() {
 
     function zoomed(event) {
         transform = event.transform;
+        leftEdge = transform.invertX(0);
+        rightEdge = transform.invertX(width);
+        topEdge = transform.invertY(0);
+        bottomEdge = transform.invertY(height);
         draw();
     }
 

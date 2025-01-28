@@ -336,6 +336,8 @@ function createGraph() {
         },
 
         updateGraph(data) {
+            if (!simulation) { simulation = initSimulation(); }
+
             simulation.stop();
 
             graphNodes = data.nodes.map(d => {

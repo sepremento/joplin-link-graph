@@ -261,19 +261,19 @@ function createGraph() {
         return d3.forceSimulation(graphNodes)
             .force("link", d3.forceLink(graphLinks)
                 .id(d => d.id)
-                .distance(graphSettings.linkDistance)
+                .distance(graphSettings.LINK_DISTANCE)
             )
             .force("posX", d3.forceX(centerX)
-                .strength(graphSettings.centerStrength / 100)
+                .strength(graphSettings.CENTER_STRENGTH / 100)
             )
             .force("posY", d3.forceY(centerY)
-                .strength(graphSettings.centerStrength / 100)
+                .strength(graphSettings.CENTER_STRENGTH / 100)
             )
             .force("charge", d3.forceManyBody()
-                .strength(graphSettings.chargeStrength)
+                .strength(graphSettings.CHARGE_STRENGTH)
             )
-            .force("nocollide", d3.forceCollide(graphSettings.collideRadius))
-            .alpha(graphSettings.alpha / 100)
+            .force("nocollide", d3.forceCollide(graphSettings.COLLIDE_RADIUS))
+            .alpha(graphSettings.ALPHA / 100)
             .on("tick", throttledDraw);
     };
 
@@ -365,7 +365,7 @@ function createGraph() {
 
             simulation.nodes(graphNodes);
             simulation.force("link").links(graphLinks);
-            simulation.alpha(graphSettings.alpha / 100).restart();
+            simulation.alpha(graphSettings.ALPHA / 100).restart();
         },
 
         updateNodeLabel(data) {
@@ -379,13 +379,13 @@ function createGraph() {
             graphSettings = Object.assign(graphSettings, data.graphSettings);
             userInput.setupGraphHandle(graphSettings);
 
-            simulation.force("link").distance(graphSettings.linkDistance);
-            simulation.force("posX").strength(graphSettings.centerStrength / 100);
-            simulation.force("posY").strength(graphSettings.centerStrength / 100);
-            simulation.force("charge").strength(graphSettings.chargeStrength);
-            simulation.force("nocollide").radius(graphSettings.collideRadius);
+            simulation.force("link").distance(graphSettings.LINK_DISTANCE);
+            simulation.force("posX").strength(graphSettings.CENTER_STRENGTH / 100);
+            simulation.force("posY").strength(graphSettings.CENTER_STRENGTH / 100);
+            simulation.force("charge").strength(graphSettings.CHARGE_STRENGTH);
+            simulation.force("nocollide").radius(graphSettings.COLLIDE_RADIUS);
 
-            simulation.alpha(graphSettings.alpha / 100);
+            simulation.alpha(graphSettings.ALPHA / 100);
             simulation.restart();
         },
     });

@@ -1,5 +1,5 @@
 import joplin from "api";
-import { JoplinNote } from './model'
+import { ColorGroup, JoplinNote } from './model'
 
 
 export interface Notebook {
@@ -273,11 +273,6 @@ export async function buildTagNodes(nodes: Map<string, Node>, all: boolean): Pro
         });
     }
     return tagNodes;
-}
-
-interface ColorGroup {
-    filter: string,
-    color: string
 }
 
 export async function buildNodeGroupMap(groups: Map<string, ColorGroup>): Promise<Map<string, Map<string, string>>> {

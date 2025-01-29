@@ -1,3 +1,8 @@
+export interface ColorGroup {
+    filter: string,
+    color: string
+}
+
 export interface JoplinNote {
     id: string;
     parent_id: string;

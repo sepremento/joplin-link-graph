@@ -75,17 +75,17 @@ function chromeRangeInputFix() {
 }
 
 export function setupGraphHandle(settings) {
-    queryInput.value = settings.query;
-    filterInput.value = settings.filter;
-    showTagsSwitch.checked = settings.showTags;
-    maxDistInput.value = settings.maxDepth;
-    distOutput.innerHTML = settings.maxDepth;
+    queryInput.value = settings.QUERY;
+    filterInput.value = settings.FILTER;
+    showTagsSwitch.checked = settings.SHOW_TAGS;
+    maxDistInput.value = settings.MAX_TREE_DEPTH;
+    distOutput.innerHTML = settings.MAX_TREE_DEPTH;
 
-    centerStrengthInput.value = settings.centerStrength;
-    chargeStrengthInput.value = settings.chargeStrength;
-    collideRadiusInput.value = settings.collideRadius;
-    linkDistanceInput.value = settings.linkDistance;
-    temperatureInput.value = settings.alpha;
+    centerStrengthInput.value = settings.CENTER_STRENGTH;
+    chargeStrengthInput.value = settings.CHARGE_STRENGTH;
+    collideRadiusInput.value = settings.COLLIDE_RADIUS;
+    linkDistanceInput.value = settings.LINK_DISTANCE;
+    temperatureInput.value = settings.ALPHA;
 
 }
 
@@ -174,15 +174,15 @@ export function initFront(initialValues, setSetting) {
     chromeRangeInputFix();
     setupGraphHandle(initialValues);
 
-    const groupNames = Object.keys(initialValues.groups)
+    const groupNames = Object.keys(initialValues.GROUPS)
 
     //setting up color groups separately because setupGraphHandle is called
     //in another part of code so stands in the way
     for (let i=0; i<groupNames.length; i++) {
         const groupBlockStub = document.getElementById("group-block-stub");
         const name = groupNames[i] ? groupNames[i] : generateRandomString(8);
-        const filter = initialValues.groups[name].filter;
-        const color = initialValues.groups[name].color;
+        const filter = initialValues.GROUPS[name].filter;
+        const color = initialValues.GROUPS[name].color;
         const n = i+1;
         groupBlockStub.insertAdjacentHTML("beforebegin",
             `<div class="control-block groups" id="${name}">

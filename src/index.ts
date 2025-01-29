@@ -1,7 +1,7 @@
 import joplin from "api";
 import * as joplinData from "./data";
 import { registerSettings } from "./settings";
-import { DataSpec, GraphData } from "./model";
+import { ColorGroup, DataSpec, GraphData } from "./model";
 import { MenuItemLocation, ToolbarButtonLocation } from "api/types";
 import { panelHtml } from "./panel-html";
 
@@ -53,23 +53,10 @@ joplin.plugins.register({
 });
 
 async function collectGraphSettings() {
-    return {
-        // these are defined only in the Graph View
-        filter: await joplin.settings.value('FILTER'),
-        maxDepth: await joplin.settings.value('MAX_TREE_DEPTH'),
-        query: await joplin.settings.value('QUERY'),
-        showTags: await joplin.settings.value('SHOW_TAGS'),
-
-        // this is a combined setting of multiple input tags, Graph View only
-        groups: await joplin.settings.value('GROUPS'),
-
-        // these are defined both in Options and in Graph View
-        alpha: await joplin.settings.value('ALPHA'),
-        centerStrength: await joplin.settings.value('CENTER_STRENGTH'),
-        chargeStrength: await joplin.settings.value('CHARGE_STRENGTH'),
-        collideRadius: await joplin.settings.value('COLLIDE_RADIUS'),
-        linkDistance: await joplin.settings.value('LINK_DISTANCE'),
-    }
+    return await joplin.settings.values([
+        'FILTER', 'MAX_TREE_DEPTH', 'QUERY', 'SHOW_TAGS', 'GROUPS', 'ALPHA',
+        'CENTER_STRENGTH', 'CHARGE_STRENGTH', 'COLLIDE_RADIUS', 'LINK_DISTANCE'
+    ]);
 }
 
 async function fetchData(spec: DataSpec) {
@@ -217,7 +204,7 @@ async function updateUI(eventName: string) {
 
         eventName = "initialGraph";
         prevNoteTitle = selectedNote.title;
-        nodeGroupMap = await joplinData.buildNodeGroupMap(graphSettings.groups);
+        nodeGroupMap = await joplinData.buildNodeGroupMap(graphSettings.GROUPS as Map<string, ColorGroup>);
 
     } else if (eventName === "noteChange") {
         // Don't update the graph is the links in this note haven't changed.
@@ -249,7 +236,7 @@ async function updateUI(eventName: string) {
 
     } else if (eventName === "noteSelectionChange") {
         let selectedNoteIds: string[];
-        const query = graphSettings.query.trim()
+        const query = (graphSettings.QUERY as string).trim()
 
         if (query) {
             const searchResult = await joplinData.executeSearch(query);
@@ -272,32 +259,32 @@ async function updateUI(eventName: string) {
         }
 
         data = await fetchData({
-            degree: graphSettings.maxDepth,
+            degree: graphSettings.MAX_TREE_DEPTH as number,
             spanningTree: data.spanningTree,
-            filterQuery: graphSettings.filter
+            filterQuery: graphSettings.FILTER as string
         });
         data.graphSettings = graphSettings;
         prevSettings = Object.assign({}, graphSettings);
     } else if (eventName === "colorsChange") {
         // don't need to fetch new nodes, just update node to color map and 
         // update nodes
-        const change = getGroupChange(graphSettings.groups, prevSettings.groups);
+        const change = getGroupChange(graphSettings.GROUPS, prevSettings.GROUPS);
         const action = change.action, groupName = change.group;
 
         if (action === "add" || action === "filter") {
-            const groupFilter = graphSettings.groups[groupName].filter;
+            const groupFilter = graphSettings.GROUPS[groupName].filter;
             const searchResult = await joplinData.executeSearch(groupFilter);
             const nodeIds = searchResult.map(({ id, }) => id)
             const nodeColorMap = new Map();
 
             for (let nodeId of nodeIds) {
-                nodeColorMap.set(nodeId, graphSettings.groups[groupName].color);
+                nodeColorMap.set(nodeId, graphSettings.GROUPS[groupName].color);
             }
             nodeGroupMap.set(groupName, nodeColorMap);
         } else if (action === "color") {
             const group = nodeGroupMap.get(groupName)
             for (let [key, _] of group.entries()) {
-                group.set(key, graphSettings.groups[groupName].color);
+                group.set(key, graphSettings.GROUPS[groupName].color);
             }
         } else if (action === "remove") {
             nodeGroupMap.delete(groupName);

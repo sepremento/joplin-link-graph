@@ -72,6 +72,16 @@ export async function registerSettings() {
       description:
         "Positive number defines gravity for nodes, negative number defines electric charge repulsion for nodes",
     },
+    CENTER_STRENGTH: {
+      advanced: true,
+      value: 100,
+      type: SettingItemType.Int,
+      section: sectionName,
+      public: true,
+      label: "Center force strength",
+      description:
+        "How strong nodes try to reach the center.",
+    },
     COLLIDE_RADIUS: {
       advanced: true,
       value: 48,
@@ -82,18 +92,6 @@ export async function registerSettings() {
       description:
         "You can't move two nodes closer together than this setting.",
     },
-    RADIUS_SCALE: {
-      advanced: true,
-      value: 100,
-      minimum: 50,
-      maximum: 500,
-      type: SettingItemType.Int,
-      section: sectionName,
-      public: true,
-      label: "Radial force scale",
-      description:
-        "This force tries to set nodes on the edge of the circle.",
-    },
     LINK_DISTANCE: {
       advanced: true,
       value: 200,
@@ -103,16 +101,6 @@ export async function registerSettings() {
       label: "Link force distance",
       description:
         "The desired distance between nodes.",
-    },
-    LINK_STRENGTH: {
-      advanced: true,
-      value: 100,
-      type: SettingItemType.Int,
-      section: sectionName,
-      public: true,
-      label: "Link force strength",
-      description:
-        "How strongly two nodes try to sustain the distance between them.",
     },
     ALPHA: {
       advanced: true,

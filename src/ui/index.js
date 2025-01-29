@@ -3,7 +3,6 @@ import * as userInput from "./user-input.ts"
 
 var width = window.innerWidth;
 var height = window.innerHeight;
-var leftEdge, rightEdge, topEdge, bottomEdge;
 const centerX = width / 2;
 const centerY = height / 2;
 
@@ -31,7 +30,7 @@ function setSetting(settingName, newVal) {
 }
 
 // next graph functions
-//
+
 function throttle(func, limit) {
     let lastCall = 0;
     return function(...args) {
@@ -82,13 +81,6 @@ function createGraph() {
     };
 
     function drawNode(node) {
-        if (
-                node.x < leftEdge ||
-                node.x > rightEdge || 
-                node.y < topEdge || 
-                node.y > bottomEdge 
-        ) return;
-
         const depth = node.distanceToCurrentNode
             ? node.distanceToCurrentNode
             : 0;
@@ -133,12 +125,6 @@ function createGraph() {
     };
 
     function drawLink(link) {
-        if (
-            (link.target.x < 0 && link.source.x < 0) ||
-            (link.target.x > width && link.source.x > width) ||
-            (link.target.y < 0 && link.source.y < 0) ||
-            (link.target.y > height && link.source.y > height) 
-        ) return;
         context.beginPath();        
         context.globalAlpha = 0.1;
         context.strokeStyle = "#999";
@@ -272,22 +258,23 @@ function createGraph() {
     };
 
     function initSimulation() {
-        const r = graphSettings.radiusScale * Math.min(centerX, centerY) / 100;
         return d3.forceSimulation(graphNodes)
             .force("link", d3.forceLink(graphLinks)
                 .id(d => d.id)
                 .distance(graphSettings.linkDistance)
-                .strength(graphSettings.linkStrength / 100)
             )
-            .force("circle", d3.forceRadial(r, centerX, centerY))
+            .force("posX", d3.forceX(centerX)
+                .strength(graphSettings.centerStrength / 100)
+            )
+            .force("posY", d3.forceY(centerY)
+                .strength(graphSettings.centerStrength / 100)
+            )
             .force("charge", d3.forceManyBody()
                 .strength(graphSettings.chargeStrength)
             )
-            .force("nocollide", d3.forceCollide(48)
-                .radius(graphSettings.collideRadius)
-            )
+            .force("nocollide", d3.forceCollide(graphSettings.collideRadius))
             .alpha(graphSettings.alpha / 100)
-            .on("tick", draw);
+            .on("tick", throttledDraw);
     };
 
     function navigateTo(event) {
@@ -324,10 +311,6 @@ function createGraph() {
 
     function zoomed(event) {
         transform = event.transform;
-        leftEdge = transform.invertX(0);
-        rightEdge = transform.invertX(width);
-        topEdge = transform.invertY(0);
-        bottomEdge = transform.invertY(height);
         draw();
     }
 
@@ -396,11 +379,9 @@ function createGraph() {
             graphSettings = Object.assign(graphSettings, data.graphSettings);
             userInput.setupGraphHandle(graphSettings);
 
-            const r = graphSettings.radiusScale * Math.min(centerX, centerY) / 100;
-            simulation.force("link")
-                .distance(graphSettings.linkDistance)
-                .strength(graphSettings.linkStrength / 100);
-            simulation.force("circle").radius(r);
+            simulation.force("link").distance(graphSettings.linkDistance);
+            simulation.force("posX").strength(graphSettings.centerStrength / 100);
+            simulation.force("posY").strength(graphSettings.centerStrength / 100);
             simulation.force("charge").strength(graphSettings.chargeStrength);
             simulation.force("nocollide").radius(graphSettings.collideRadius);
 

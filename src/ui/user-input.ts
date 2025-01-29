@@ -8,10 +8,9 @@ const distOutput = document.getElementById("distance-output") as HTMLOutputEleme
 const groupInput = document.getElementById("group-stub") as HTMLInputElement;
 const addGroupBtn = document.getElementById("add-group-btn") as HTMLInputElement;
 
+const centerStrengthInput = document.getElementById("center-strength-input") as HTMLInputElement;
 const chargeStrengthInput = document.getElementById("charge-strength-input") as HTMLInputElement;
 const collideRadiusInput = document.getElementById("nocollide-radius-input") as HTMLInputElement;
-const radiusScaleInput = document.getElementById("radius-scale-input") as HTMLInputElement;
-const linkStrenthInput = document.getElementById("link-strength-input") as HTMLInputElement;
 const linkDistanceInput = document.getElementById("link-distance-input") as HTMLInputElement;
 const showTagsSwitch = document.getElementById("show-tags-switch") as HTMLInputElement;
 const maxDistInput = document.getElementById("distance-slider") as HTMLInputElement;
@@ -82,11 +81,10 @@ export function setupGraphHandle(settings) {
     maxDistInput.value = settings.maxDepth;
     distOutput.innerHTML = settings.maxDepth;
 
+    centerStrengthInput.value = settings.centerStrength;
     chargeStrengthInput.value = settings.chargeStrength;
     collideRadiusInput.value = settings.collideRadius;
-    radiusScaleInput.value = settings.radiusScale;
     linkDistanceInput.value = settings.linkDistance;
-    linkStrenthInput.value = settings.linkStrength;
     temperatureInput.value = settings.alpha;
 
 }
@@ -195,17 +193,14 @@ export function initFront(initialValues, setSetting) {
         )
     }
 
+    centerStrengthInput.addEventListener("change", () => {
+        setSetting("CENTER_STRENGTH", centerStrengthInput.valueAsNumber);
+    });
     chargeStrengthInput.addEventListener("change", () => {
         setSetting("CHARGE_STRENGTH", chargeStrengthInput.valueAsNumber);
     });
     collideRadiusInput.addEventListener("change", () => {
         setSetting("COLLIDE_RADIUS", collideRadiusInput.valueAsNumber);
-    });
-    radiusScaleInput.addEventListener("change", () => {
-        setSetting("RADIUS_SCALE", radiusScaleInput.valueAsNumber);
-    });
-    linkStrenthInput.addEventListener("change", () => {
-        setSetting("LINK_STRENGTH", linkStrenthInput.valueAsNumber);
     });
     linkDistanceInput.addEventListener("change", () => {
         setSetting("LINK_DISTANCE", linkDistanceInput.valueAsNumber);

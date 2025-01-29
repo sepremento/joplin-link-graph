@@ -371,6 +371,7 @@ function createGraph() {
 
         updateNodeLabel(data) {
             const node = graphNodes.find((n) => n.id === data.noteId);
+            if (!node) return;
             node.title = data.newTitle;
 
             if (transform.k > 0.7) draw();

@@ -133,6 +133,7 @@ async function getLinkedNodes(
         if (opts.INCLUDE_BACKLINKS) {
             const backlinksPromises = joplinNotes.map(n => getAllBacklinksForNote(n.id));
             let backlinks = await Promise.all(backlinksPromises.map((p) => p.catch((e) => e)));
+            backlinks = backlinks.filter((r) => !(r instanceof Error))
 
             for (let lnk of backlinks) {
                 const filtered = lnk.backlinks.filter(link => !noteIdsToExclude.has(link.id));
@@ -227,7 +228,8 @@ export async function buildTagNodes(nodes: Map<string, Node>, all: boolean): Pro
                 fields: ["id", "title"]
             }));
         const tagsResult = await Promise.all(tagsPromises.map((p) => p.catch((e) => e)));
-        for (let res of tagsResult) {
+        const validTags = tagsResult.filter((r) => !(r instanceof Error));
+        for (let res of validTags) {
             const tags = res.items;
             for (let tag of tags) {
                 if (!uniqueTagIds.has(tag.id)) {
@@ -247,6 +249,8 @@ export async function buildTagNodes(nodes: Map<string, Node>, all: boolean): Pro
     const notesForTags = await Promise.all(notesPromises.map((p) => p.catch((e) => e)));
 
     for (let i=0; i < uniqueTags.length; i++) {
+        if (notesForTags[i] instanceof Error) continue;
+
         const tagId = uniqueTags[i].id;
         const title = uniqueTags[i].title;
         const links = notesForTags[i].items.map(({ id }) => id);
@@ -270,6 +274,8 @@ export async function buildNodeGroupMap(groups: Map<string, ColorGroup>): Promis
     const results = await Promise.all(promises.map((p) => p.catch((e) => e)));
     
     for (let i=0; i<groupsArr.length; i++) {
+        if (results[i] instanceof Error) continue;
+
         const groupName = groupsArr[i][0];
         const groupColor = groupsArr[i][1].color;
         const nodeColorMap: Map<string, string> = new Map();

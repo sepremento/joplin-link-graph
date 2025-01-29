@@ -351,6 +351,7 @@ function createGraph() {
 
         updateGraph(data) {
             if (!simulation) { simulation = initSimulation(); }
+            if (!transform) { transform = d3.zoomIdentity; } 
 
             simulation.stop();
 

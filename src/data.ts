@@ -146,11 +146,12 @@ async function getLinkedNodes(
             const node = buildNodeFromNote(joplinNote);
 
             node.distanceToCurrentNode = degree;
-            nodeMap.set(joplinNote.id, node);
 
             node.backlinks = opts.INCLUDE_BACKLINKS ? backlinksMap.get(node.id) : [];
             node.num_backlinks = node.backlinks.length;
             node.num_links = node.num_forwardlinks + node.num_backlinks;
+
+            nodeMap.set(joplinNote.id, node);
 
             const allLinks = [
                 ...node.forwardlinks, // these are the forward-links
@@ -378,7 +379,7 @@ function preprocessFilter(filterQuery: string): PreprocessedFilter {
             result[key] = +value;
         }
     }
-    result.query = query;
+    result.query = query.trim();
     return result;
 }
 

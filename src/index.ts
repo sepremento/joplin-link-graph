@@ -13,7 +13,7 @@ var prevNoteLinks = [];
 var prevNoteTitle: string;
 var prevSettings: any = {};
 var syncOngoing = false;
-const USER_INPUT = ["QUERY", "FILTER", "MAX_TREE_DEPTH", "SHOW_TAGS", "GROUPS"]
+const USER_INPUT = ["QUERY", "FILTER", "MAX_TREE_DEPTH", "SHOW_TAGS", "GROUPS", "INCLUDE_BACKLINKS"]
 
 
 joplin.plugins.register({
@@ -54,8 +54,8 @@ joplin.plugins.register({
 
 async function collectGraphSettings() {
     return await joplin.settings.values([
-        'FILTER', 'MAX_TREE_DEPTH', 'QUERY', 'SHOW_TAGS', 'GROUPS', 'ALPHA',
-        'CENTER_STRENGTH', 'CHARGE_STRENGTH', 'COLLIDE_RADIUS', 'LINK_DISTANCE'
+        'FILTER', 'MAX_TREE_DEPTH', 'QUERY', 'SHOW_TAGS', 'INCLUDE_BACKLINKS', 'GROUPS',
+        'ALPHA', 'CENTER_STRENGTH', 'CHARGE_STRENGTH', 'COLLIDE_RADIUS', 'LINK_DISTANCE'
     ]);
 }
 
@@ -85,7 +85,7 @@ async function fetchData(spec: DataSpec) {
     };
 
     for (let [id, node] of nodes.entries()) {
-        for (let link of node.links) {
+        for (let link of node.forwardlinks) {
             // Slice note link if link directs to an anchor
             var index = link.indexOf("#");
             if (index != -1) { link = link.substr(0, index); }
@@ -104,10 +104,12 @@ async function fetchData(spec: DataSpec) {
         data.nodes.push({
             id: id,
             title: node.title,
-            parent_id: node.parent_id,
             color: "",
             is_tag: node.is_tag,
-            distanceToCurrentNode: node.distanceToCurrentNote
+            num_links: node.num_links,
+            num_forwardlinks: node.num_forwardlinks,
+            num_backlinks: node.num_backlinks,
+            distanceToCurrentNode: node.distanceToCurrentNode
         });
 
     }

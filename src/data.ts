@@ -1,5 +1,5 @@
 import joplin from "api";
-import { ColorGroup, JoplinNote } from './model'
+import { ColorGroup, JoplinNote, Node, PreprocessedFilter } from './model'
 
 
 export interface Notebook {
@@ -7,23 +7,6 @@ export interface Notebook {
     parent_id: string;
 }
 
-
-export interface Node {
-    id: string;
-    parent_id: string;
-    title: string;
-    folder: string;
-    links: Set<string>;
-    is_tag: boolean;
-    backlinks?: Array<string>;
-    /**
-   * (Minimal) distance of this note to current/selected note in Joplin
-   * 0 => current note itself
-   * 1 => directly adjacent note
-   * x => ... and so on
-   */
-    distanceToCurrentNote?: number;
-}
 
 // Fetch notes
 export async function getNodes(
@@ -36,10 +19,12 @@ export async function getNodes(
 
     const noteIdsToExclude: Set<string> = new Set();
 
-    var nodes = new Map<string, Node>();
+    let nodes = new Map<string, Node>();
 
-    if (filterQuery) {
-        const searchResult: Array<JoplinNote> = await executeSearch(filterQuery);
+    const prep = preprocessFilter(filterQuery);
+
+    if (prep.query) {
+        const searchResult: Array<JoplinNote> = await executeSearch(prep.query);
         for (let n of searchResult) noteIdsToExclude.add(n.id);
     }
 
@@ -49,6 +34,7 @@ export async function getNodes(
             maxDegree,
             noteIdsToExclude,
         );
+        nodes = filterByNumLinks(nodes, prep);
     } else {
         nodes = await getAllNodes(maxNotes, noteIdsToExclude);
     }
@@ -67,9 +53,8 @@ async function getAllNodes(
     var page_num = 1;
 
     do {
-        // `parent_id` is the ID of the notebook containing the note.
         var notes = await joplin.data.get(["notes"], {
-            fields: ["id", "parent_id", "title", "body"],
+            fields: ["id", "title", "body"],
             order_by: "updated_time",
             order_dir: "DESC",
             limit: maxNotes < 100 ? maxNotes : 100,
@@ -105,11 +90,12 @@ function buildNodeFromNote(joplinNote: JoplinNote): Node {
     return {
         id: joplinNote.id,
         title: joplinNote.title,
-        parent_id: joplinNote.parent_id,
-        folder: undefined,
         is_tag: false,
-        links: links,
-        backlinks: new Array<string>()
+        forwardlinks: links,
+        backlinks: new Array<string>(),
+        num_links: links.size,
+        num_forwardlinks: links.size,
+        num_backlinks: 0
     };
 }
 
@@ -128,7 +114,7 @@ async function getLinkedNodes(
     const backlinksMap = new Map();
     var degree = 0;
 
-    const showTags = await joplin.settings.value('SHOW_TAGS');
+    const opts = await joplin.settings.values(['SHOW_TAGS', 'INCLUDE_BACKLINKS']);
 
     do {
         // Traverse a new batch of pending note ids, storing the note data in
@@ -144,25 +130,29 @@ async function getLinkedNodes(
         }
         pending = [];
 
-        const backlinksPromises = joplinNotes.map(n => getAllBacklinksForNote(n.id));
-        let backlinks = await Promise.all(backlinksPromises.map((p) => p.catch((e) => e)));
+        if (opts.INCLUDE_BACKLINKS) {
+            const backlinksPromises = joplinNotes.map(n => getAllBacklinksForNote(n.id));
+            let backlinks = await Promise.all(backlinksPromises.map((p) => p.catch((e) => e)));
 
-        for (let lnk of backlinks) {
-            const filtered = lnk.backlinks.filter(link => !noteIdsToExclude.has(link.id));
-            backlinksMap.set(lnk.id, filtered.map(({ id, }) => id));
+            for (let lnk of backlinks) {
+                const filtered = lnk.backlinks.filter(link => !noteIdsToExclude.has(link.id));
+                backlinksMap.set(lnk.id, filtered.map(({ id, }) => id));
+            }
         }
 
         for (const joplinNote of joplinNotes) {
             // store note data to be returned at the end of the traversal
             const node = buildNodeFromNote(joplinNote);
 
-            node.distanceToCurrentNote = degree;
+            node.distanceToCurrentNode = degree;
             nodeMap.set(joplinNote.id, node);
 
-            node.backlinks = backlinksMap.get(node.id);
+            node.backlinks = opts.INCLUDE_BACKLINKS ? backlinksMap.get(node.id) : [];
+            node.num_backlinks = node.backlinks.length;
+            node.num_links = node.num_forwardlinks + node.num_backlinks;
 
             const allLinks = [
-                ...node.links, // these are the forward-links
+                ...node.forwardlinks, // these are the forward-links
                 ...node.backlinks,
             ];
 
@@ -175,13 +165,13 @@ async function getLinkedNodes(
             }
         }
 
-        if (showTags) {
+        if (opts.SHOW_TAGS) {
             const tagNodes = await buildTagNodes(nodeMap, false);
 
             for (let [id, tag] of tagNodes.entries()) {
                 if (!nodeMap.has(id)) nodeMap.set(id, tag);
 
-                for (let link of tag.links) {
+                for (let link of tag.forwardlinks) {
                     if (!visited.has(link)) pending.push(link);
                 }
             }
@@ -266,10 +256,8 @@ export async function buildTagNodes(nodes: Map<string, Node>, all: boolean): Pro
         if (!tagNodes.has(tagId)) tagNodes.set(tagId, {
             id: tagId,
             title: title,
-            parent_id: undefined,
-            folder: undefined,
             is_tag: true,
-            links: links
+            forwardlinks: links
         });
     }
     return tagNodes;
@@ -302,7 +290,7 @@ export async function executeSearch(query: string): Promise<Array<JoplinNote>> {
     do {
         var notes = await joplin.data.get(['search'], {
             query: query,
-            fields: ["id", "parent_id", "title", "body"],
+            fields: ["id", "title", "body"],
             limit: maxNotes < 100 ? maxNotes : 100,
             page: page
         });
@@ -318,7 +306,7 @@ export async function executeSearch(query: string): Promise<Array<JoplinNote>> {
 async function getNoteArray(ids: string[]): Promise<Array<JoplinNote>> {
     var promises = ids.map((id) =>
         joplin.data.get(["notes", id], {
-            fields: ["id", "parent_id", "title", "body"],
+            fields: ["id", "title", "body"],
         })
     );
 
@@ -356,7 +344,7 @@ async function getAllBacklinksForNote(noteId: string): Promise<Object> {
     do {
         response = await joplin.data.get(["search"], {
             query: noteId,
-            fields: ["id", "parent_id"],
+            fields: ["id"],
             page: pageNum++,
         });
         links.push(...response.items);
@@ -364,3 +352,54 @@ async function getAllBacklinksForNote(noteId: string): Promise<Object> {
     return {id: noteId, backlinks: links};
 }
 
+function preprocessFilter(filterQuery: string): PreprocessedFilter {
+    if (!filterQuery) return { query: filterQuery };
+    let query = filterQuery;
+    let result: PreprocessedFilter = { query: filterQuery };
+    const patterns = [
+        /(min_links):\s*(\d+)/,
+        /(max_links):\s*(\d+)/,
+        /(min_forwardlinks):\s*(\d+)/,
+        /(max_forwardlinks):\s*(\d+)/,
+        /(min_backlinks):\s*(\d+)/,
+        /(max_backlinks):\s*(\d+)/,
+    ]
+    for (let pat of patterns) {
+        const match = filterQuery.match(pat);
+        if (match) {
+            const key = match[1], value = match[2];
+            query = query.replace(match[0], '');
+            result[key] = +value;
+        }
+    }
+    result.query = query;
+    return result;
+}
+
+function filterByNumLinks(
+    nodeMap: Map<string, Node>,
+    filter: PreprocessedFilter
+): Map<string, Node> {
+    const filteredMap = new Map<string, Node>();
+
+    for (const [id, node] of nodeMap) {
+        // Проверяем условия для num_links
+        const meetsMinLinks = filter.min_links === undefined || node.num_links >= filter.min_links;
+        const meetsMaxLinks = filter.max_links === undefined || node.num_links <= filter.max_links;
+
+        // Проверяем условия для num_forwardlinks
+        const meetsMinForwardLinks = filter.min_forwardlinks === undefined || node.num_forwardlinks >= filter.min_forwardlinks;
+        const meetsMaxForwardLinks = filter.max_forwardlinks === undefined || node.num_forwardlinks <= filter.max_forwardlinks;
+
+        // Проверяем условия для num_backlinks
+        const meetsMinBacklinks = filter.min_backlinks === undefined || node.num_backlinks >= filter.min_backlinks;
+        const meetsMaxBacklinks = filter.max_backlinks === undefined || node.num_backlinks <= filter.max_backlinks;
+
+        // Если все условия выполнены, добавляем узел в отфильтрованную карту
+        if (meetsMinLinks && meetsMaxLinks && meetsMinForwardLinks && meetsMaxForwardLinks && meetsMinBacklinks && meetsMaxBacklinks) {
+            filteredMap.set(id, node);
+        }
+    }
+
+    return filteredMap;
+}

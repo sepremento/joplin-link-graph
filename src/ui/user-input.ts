@@ -13,6 +13,7 @@ const chargeStrengthInput = document.getElementById("charge-strength-input") as 
 const collideRadiusInput = document.getElementById("nocollide-radius-input") as HTMLInputElement;
 const linkDistanceInput = document.getElementById("link-distance-input") as HTMLInputElement;
 const showTagsSwitch = document.getElementById("show-tags-switch") as HTMLInputElement;
+const includeBacklinksSwitch = document.getElementById("include-backlinks-switch") as HTMLInputElement;
 const maxDistInput = document.getElementById("distance-slider") as HTMLInputElement;
 const temperatureInput = document.getElementById("temperature-slider") as HTMLInputElement;
 
@@ -78,6 +79,7 @@ export function setupGraphHandle(settings) {
     queryInput.value = settings.QUERY;
     filterInput.value = settings.FILTER;
     showTagsSwitch.checked = settings.SHOW_TAGS;
+    includeBacklinksSwitch.checked = settings.INCLUDE_BACKLINKS;
     maxDistInput.value = settings.MAX_TREE_DEPTH;
     distOutput.innerHTML = settings.MAX_TREE_DEPTH;
 
@@ -210,6 +212,9 @@ export function initFront(initialValues, setSetting) {
     });
     showTagsSwitch.addEventListener("change", () => {
         setSetting("SHOW_TAGS", showTagsSwitch.checked);
+    });
+    includeBacklinksSwitch.addEventListener("change", () => {
+        setSetting("INCLUDE_BACKLINKS", includeBacklinksSwitch.checked);
     });
     maxDistInput.addEventListener("change", () => {
         setSetting("MAX_TREE_DEPTH", maxDistInput.value);

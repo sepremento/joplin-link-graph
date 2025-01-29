@@ -62,6 +62,15 @@ export async function registerSettings() {
       description:
         "",
     },
+    INCLUDE_BACKLINKS: {
+      value: true,
+      type: SettingItemType.Bool,
+      section: sectionName,
+      public: true,
+      label: "Include backlinks into the graph",
+      description:
+        "Backlinks refer to links from other notes",
+    },
     CHARGE_STRENGTH: {
       advanced: true,
       value: 20,

@@ -61,6 +61,7 @@ function createGraph() {
     let simulation;
     let transform;
     let timer;
+    let zoom;
 
     function dragstarted(event) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -314,6 +315,12 @@ function createGraph() {
         draw();
     }
 
+    function resetZoom() {
+        d3.select('canvas').transition()
+            .duration(750)
+            .call(zoom.transform, d3.zoomIdentity);
+    }
+
     return Object.assign(canvas, {
 
         graphInitialized: false,
@@ -334,6 +341,8 @@ function createGraph() {
             transform = d3.zoomIdentity;
             simulation = initSimulation();
 
+            zoom = d3.zoom().scaleExtent([1/10, 8]).on('zoom', zoomed)
+
             d3.select(canvas)
                 .on('mousemove', highlightRegion)
                 .on('click', navigateTo)
@@ -342,9 +351,7 @@ function createGraph() {
                     .on("start", dragstarted)
                     .on("drag", dragged)
                     .on("end", dragended))
-                .call(d3.zoom()
-                    .scaleExtent([1/10, 8])
-                    .on('zoom', zoomed));
+                .call(zoom);
 
             this.graphInitialized = true;
         },
@@ -363,6 +370,7 @@ function createGraph() {
             spanningTree = data.spanningTree;
 
             if (!simulation) simulation = initSimulation();
+            if (graphNodes.length < 20 && transform.k < 0.7) resetZoom();
 
             simulation.nodes(graphNodes);
             simulation.force("link").links(graphLinks);

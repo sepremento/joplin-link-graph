@@ -22,6 +22,8 @@ export interface Node {
     title: string;
     is_tag: boolean;
     color?: string;
+    faded?: boolean;
+    focused?: boolean;
     forwardlinks?: Set<string>;
     backlinks?: Array<string>;
     num_links: number;

@@ -105,6 +105,8 @@ async function fetchData(spec: DataSpec) {
             id: id,
             title: node.title,
             color: "",
+            faded: false,
+            focused: false,
             is_tag: node.is_tag,
             num_links: node.num_links,
             num_forwardlinks: node.num_forwardlinks,

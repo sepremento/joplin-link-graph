@@ -81,7 +81,7 @@ export function setupGraphHandle(settings) {
     showTagsSwitch.checked = settings.SHOW_TAGS;
     includeBacklinksSwitch.checked = settings.INCLUDE_BACKLINKS;
     maxDistInput.value = settings.MAX_TREE_DEPTH;
-    distOutput.innerHTML = settings.MAX_TREE_DEPTH;
+    distOutput.innerHTML = Number(settings.MAX_TREE_DEPTH) >= 0 ? settings.MAX_TREE_DEPTH : "G";
 
     centerStrengthInput.value = settings.CENTER_STRENGTH;
     chargeStrengthInput.value = settings.CHARGE_STRENGTH;
@@ -232,7 +232,7 @@ export function initFront(initialValues, setSetting) {
         }
     });
     maxDistInput.addEventListener("input", () => {
-        distOutput.value = maxDistInput.value;
+        distOutput.value = Number(maxDistInput.value) < 0 ? "G" : maxDistInput.value;
     });
 
     groupInput.addEventListener("keypress", (ev) => {

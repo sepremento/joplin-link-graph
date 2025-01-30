@@ -46,7 +46,7 @@ export async function registerSettings() {
     MAX_TREE_DEPTH: {
       value: 2,
       type: SettingItemType.Int,
-      minimum: 0,
+      minimum: -1,
       section: sectionName,
       public: false,
       label: "Max degree of separation",

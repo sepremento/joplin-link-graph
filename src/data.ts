@@ -28,7 +28,7 @@ export async function getNodes(
         for (let n of searchResult) noteIdsToExclude.add(n.id);
     }
 
-    if (maxDegree > 0) {
+    if (maxDegree >= 0) {
         nodes = await getLinkedNodes(
             selectedNotes,
             maxDegree,

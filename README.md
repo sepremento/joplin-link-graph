@@ -54,3 +54,5 @@ https://github.com/user-attachments/assets/3b9d0786-83f7-4f9e-8c5d-2eb87b6f532f
 1. Launch [Joplin in dev
    mode](https://joplinapp.org/api/references/development_mode/) and load the
    plugin.
+
+keywords: joplin-plugin

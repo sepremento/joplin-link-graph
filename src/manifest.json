@@ -1,10 +1,25 @@
 {
 	"manifest_version": 1,
-	"id": "sepremento.AwesomeGraph",
-	"app_min_version": "1.7",
-	"version": "3.7.0",
+	"id": "org.sepremento.joplin.graph",
+	"app_min_version": "3.2.12",
+	"version": "1.0.0",
 	"name": "Sepremento's Awesome Graph",
 	"description": "Visualize connections between notes in Joplin.",
 	"author": "Sepremento",
-	"keywords": ["joplin", "link", "graph", "ui", "zettelkasten"]
+    "repository_url": "https://github.com/sepremento/joplin-graph-view",
+	"keywords": ["graph", "knowledge graph", "backlinks", "links", "zettelkasten"],
+    "categories": ["productivity", "personal knowledge management"],
+    "icons": {
+        "256": "icons/icon-256.png"
+    },
+    "screenshots": [
+        {
+            "src": "screenshots/screenshot-1.png",
+            "label": "Add multiple colored groups"
+        },
+        {
+            "src": "screenshots/screenshot-2.png",
+            "label": "Adjust forces, highlight nodes on hover"
+        }
+    ]
 }

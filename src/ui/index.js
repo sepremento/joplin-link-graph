@@ -63,6 +63,8 @@ function createGraph() {
     let timer;
     let zoom;
 
+    d3.select('#center-graph-btn').on('click', centerGraph);
+
     function dragstarted(event) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
         event.subject.fx = event.subject.x;
@@ -289,6 +291,39 @@ function createGraph() {
             });
         }
     };
+
+    function centerGraph() {
+        console.log("Simulation stopped!");
+        const xCoords = graphNodes.map(node => node.x);
+        const yCoords = graphNodes.map(node => node.y);
+
+        const minX = Math.min(...xCoords) - 30;
+        const maxX = Math.max(...xCoords) + 30;
+        const minY = Math.min(...yCoords) - 30;
+        const maxY = Math.max(...yCoords) + 30;
+
+        const graphWidth = maxX - minX;
+        const graphHeight = maxY - minY;
+
+        const scaleX = width / graphWidth;
+        const scaleY = height / graphHeight;
+        const k = Math.min(scaleX, scaleY);
+
+        const centerGraphX = (minX + maxX) / 2;
+        const centerGraphY = (minY + maxY) / 2;
+
+        const centerViewportX = width / 2;
+        const centerViewportY = height / 2;
+
+        const x = centerViewportX - centerGraphX * k;
+        const y = centerViewportY - centerGraphY * k;
+
+        let centered = new d3.ZoomTransform(k, x, y);
+
+        d3.select('canvas').transition()
+            .duration(750)
+            .call(zoom.transform, centered);
+    }
 
     function wrapNodeText(context, d, r, width) {
         var text = d.title, lineHeight = 16,

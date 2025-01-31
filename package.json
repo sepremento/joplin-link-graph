@@ -1,5 +1,5 @@
 {
-  "name": "joplin-plugin-sepremento-awesome-graph",
+  "name": "joplin-plugin-graph-view",
   "version": "1.0.0",
   "scripts": {
     "dist": "webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",

@@ -5,6 +5,7 @@ var width = window.innerWidth;
 var height = window.innerHeight;
 const centerX = width / 2;
 const centerY = height / 2;
+const MAX_LABEL_WIDTH = 180;
 
 // first functions are for communication with the plugin
 
@@ -88,7 +89,6 @@ function createGraph() {
             ? node.distanceToCurrentNode
             : 0;
         let r = Math.max(10 - 3 * depth, 4);
-        const maxLabelWidth = 180;
         context.beginPath();
         context.globalAlpha = 1;
         context.strokeStyle = "#999";
@@ -122,7 +122,7 @@ function createGraph() {
         context.arc(node.x, node.y, r, 0, 2 * Math.PI);
         context.fill();
         if (transform.k >= 0.7) {
-            wrapNodeText(context, node, r, maxLabelWidth);
+            wrapNodeText(context, node, r, MAX_LABEL_WIDTH);
         }
         context.stroke();
     };
@@ -293,14 +293,14 @@ function createGraph() {
     };
 
     function centerGraph() {
-        console.log("Simulation stopped!");
         const xCoords = graphNodes.map(node => node.x);
         const yCoords = graphNodes.map(node => node.y);
+        const bottoms = graphNodes.map(node => node.textLowEdge);
 
-        const minX = Math.min(...xCoords) - 30;
-        const maxX = Math.max(...xCoords) + 30;
+        const minX = Math.min(...xCoords) - MAX_LABEL_WIDTH / 2;
+        const maxX = Math.max(...xCoords) + MAX_LABEL_WIDTH / 2;
         const minY = Math.min(...yCoords) - 30;
-        const maxY = Math.max(...yCoords) + 30;
+        const maxY = Math.max(...bottoms) + 30;
 
         const graphWidth = maxX - minX;
         const graphHeight = maxY - minY;
@@ -343,6 +343,7 @@ function createGraph() {
             }
         }
         context.fillText(line.join(" "), d.x - len / 2 , d.y + offset + (N+1) * lineHeight);
+        d.textLowEdge = d.y + offset + (N+1) * lineHeight;
     }
 
     function zoomed(event) {

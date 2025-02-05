@@ -111,6 +111,16 @@ export async function registerSettings() {
       description:
         "The desired distance between nodes.",
     },
+    MAX_TEXT_WIDTH: {
+      advanced: true,
+      value: 180,
+      type: SettingItemType.Int,
+      section: sectionName,
+      public: false,
+      label: "Maximum width of the node text",
+      description:
+        "",
+    },
     ALPHA: {
       advanced: true,
       value: 30,

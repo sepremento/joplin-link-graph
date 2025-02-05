@@ -55,7 +55,8 @@ joplin.plugins.register({
 async function collectGraphSettings() {
     return await joplin.settings.values([
         'FILTER', 'MAX_TREE_DEPTH', 'QUERY', 'SHOW_TAGS', 'INCLUDE_BACKLINKS', 'GROUPS',
-        'ALPHA', 'CENTER_STRENGTH', 'CHARGE_STRENGTH', 'COLLIDE_RADIUS', 'LINK_DISTANCE'
+        'ALPHA', 'CENTER_STRENGTH', 'CHARGE_STRENGTH', 'COLLIDE_RADIUS', 'LINK_DISTANCE',
+        'MAX_TEXT_WIDTH'
     ]);
 }
 

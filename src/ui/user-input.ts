@@ -1,3 +1,5 @@
+import { text } from "stream/consumers";
+
 const graphContainer = document.getElementById('container');
 const draggables = document.querySelectorAll('div.drag-handle');
 
@@ -8,6 +10,7 @@ const distOutput = document.getElementById("distance-output") as HTMLOutputEleme
 const groupInput = document.getElementById("group-stub") as HTMLInputElement;
 const addGroupBtn = document.getElementById("add-group-btn") as HTMLInputElement;
 
+const textWidthInput = document.getElementById("text-width-input") as HTMLInputElement;
 const centerStrengthInput = document.getElementById("center-strength-input") as HTMLInputElement;
 const chargeStrengthInput = document.getElementById("charge-strength-input") as HTMLInputElement;
 const collideRadiusInput = document.getElementById("nocollide-radius-input") as HTMLInputElement;
@@ -83,6 +86,7 @@ export function setupGraphHandle(settings) {
     maxDistInput.value = settings.MAX_TREE_DEPTH;
     distOutput.innerHTML = Number(settings.MAX_TREE_DEPTH) >= 0 ? settings.MAX_TREE_DEPTH : "G";
 
+    textWidthInput.value = settings.MAX_TEXT_WIDTH;
     centerStrengthInput.value = settings.CENTER_STRENGTH;
     chargeStrengthInput.value = settings.CHARGE_STRENGTH;
     collideRadiusInput.value = settings.COLLIDE_RADIUS;
@@ -195,6 +199,9 @@ export function initFront(initialValues, setSetting) {
         )
     }
 
+    textWidthInput.addEventListener("change", () => {
+        setSetting("MAX_TEXT_WIDTH", textWidthInput.valueAsNumber);
+    });
     centerStrengthInput.addEventListener("change", () => {
         setSetting("CENTER_STRENGTH", centerStrengthInput.valueAsNumber);
     });

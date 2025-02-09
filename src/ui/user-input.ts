@@ -1,5 +1,3 @@
-import { text } from "stream/consumers";
-
 const graphContainer = document.getElementById('container');
 const draggables = document.querySelectorAll('div.drag-handle');
 

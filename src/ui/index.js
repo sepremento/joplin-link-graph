@@ -7,7 +7,6 @@ var height = window.innerHeight;
 window.onresize = () => {
     width = window.innerWidth;
     height = window.innerHeight;
-    console.log("width:", width, "height:", height);
 }
 
 

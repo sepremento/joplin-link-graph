@@ -3,8 +3,13 @@ import * as userInput from "./user-input.ts"
 
 var width = window.innerWidth;
 var height = window.innerHeight;
-const centerX = width / 2;
-const centerY = height / 2;
+
+window.onresize = () => {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    console.log("width:", width, "height:", height);
+}
+
 
 // first functions are for communication with the plugin
 
@@ -265,10 +270,10 @@ function createGraph() {
                 .id(d => d.id)
                 .distance(graphSettings.LINK_DISTANCE)
             )
-            .force("posX", d3.forceX(centerX)
+            .force("posX", d3.forceX(width / 2)
                 .strength(graphSettings.CENTER_STRENGTH / 100)
             )
-            .force("posY", d3.forceY(centerY)
+            .force("posY", d3.forceY(height / 2)
                 .strength(graphSettings.CENTER_STRENGTH / 100)
             )
             .force("charge", d3.forceManyBody()

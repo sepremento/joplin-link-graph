@@ -25,43 +25,43 @@ const scale = [
     "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928"
 ]
 
+let isDragging = false;
 let offsetX: number, offsetY: number;
 
 for (const draggable of draggables) {
-    draggable.addEventListener('mousedown', drag);
-    draggable.addEventListener('mouseup', (_) => {
-        document.removeEventListener('mousemove', move)
-    }) 
-    draggable.addEventListener('mouseout', (_) => {
-        document.removeEventListener('mousemove', move)
-    }) 
+    draggable.addEventListener('mousedown', startDragging);
+    document.addEventListener('mouseup', stopDragging);
+}
+
+function startDragging(ev) {
+    if (!ev.target.classList.contains('drag-handle')) return;
+
+    isDragging = true;
+    offsetX = ev.clientX - ev.target.parentNode.offsetLeft;
+    offsetY = ev.clientY - ev.target.parentNode.offsetTop;
+    document.addEventListener('mousemove', drag);
+}
+
+function stopDragging() {
+    isDragging = false;
+    document.removeEventListener('mousemove', drag);
 }
 
 function drag(ev) {
-    if (!ev.currentTarget.classList.contains('drag-handle')) { return; };
+    if (!isDragging) return;
 
-    offsetX = ev.clientX - ev.currentTarget.parentElement.offsetLeft;
-    offsetY = ev.clientY - ev.currentTarget.parentElement.offsetTop;
-    document.addEventListener('mousemove', move);
-}
-
-function move(ev) {
-    if (!ev.target.classList.contains('drag-handle')) { return; };
-
-    var newX = ev.clientX - offsetX;
-    var newY = ev.clientY - offsetY;
-
-    if (newX < 0) { newX = 0; }
-    if (newX + ev.target.parentNode.offsetWidth > graphContainer.offsetWidth) {
-        newX = graphContainer.offsetWidth - ev.target.parentNode.offsetWidth;
-    }
-    if (newY < 0) { newY = 0; }
-    if (newY + ev.target.parentNode.offsetHeight > graphContainer.offsetHeight) {
-        newY = graphContainer.offsetHeight - ev.target.parentNode.offsetHeight;
-    }
-
-    ev.target.parentNode.style.left = `${newX}px`;
-    ev.target.parentNode.style.top = `${newY}px`;
+    requestAnimationFrame(() => {
+        const newX = Math.min(
+            Math.max(0, ev.clientX - offsetX),
+            graphContainer.offsetWidth - ev.target.parentNode.offsetWidth
+        )
+        const newY = Math.min(
+            Math.max(0, ev.clientY - offsetY),
+            graphContainer.offsetHeight - ev.target.parentNode.offsetHeight
+        );
+        ev.target.parentNode.style.left = `${newX}px`;
+        ev.target.parentNode.style.top = `${newY}px`;
+    })
 }
 
 function chromeRangeInputFix() {

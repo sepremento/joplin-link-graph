@@ -331,22 +331,23 @@ function createGraph() {
     function wrapNodeText(context, d, r, width) {
         var text = d.title, lineHeight = 16,
         words = text.split(/\s+/).reverse(),
-        word, line = [], len, N = 0,
-        offset = r;
+        word, line = [], len, N = 1,
+        offset = r, lastLineLeftOffset;
 
         while (word = words.pop()) {
             line.push(word);
             len = context.measureText(line.join(" ")).width;
             if (len > width) {
                 line.pop();
-                context.fillText(line.join(" "), d.x - width / 2, d.y + offset + (N+1) * lineHeight);
+                context.fillText(line.join(" "), d.x - width / 2, d.y + offset + N * lineHeight);
                 N += 1;
                 line = [word]
                 len = context.measureText(line.join(" ")).width;
             }
         }
-        context.fillText(line.join(" "), d.x - width / 2 , d.y + offset + (N+1) * lineHeight);
-        d.textLowEdge = d.y + offset + (N+1) * lineHeight;
+        lastLineLeftOffset = N === 1 ? len : width;
+        context.fillText(line.join(" "), d.x - lastLineLeftOffset / 2 , d.y + offset + N * lineHeight);
+        d.textLowEdge = d.y + offset + N * lineHeight;
     }
 
     function zoomed(event) {
